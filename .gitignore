@@ -1,0 +1,8 @@
+/vendor/
+/uploads/receipts/*
+/uploads/contracts/*
+/uploads/maintenance/*
+!/uploads/receipts/.gitkeep
+!/uploads/contracts/.gitkeep
+!/uploads/maintenance/.gitkeep
+.DS_Store
