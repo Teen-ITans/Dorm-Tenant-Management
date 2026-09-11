@@ -17,6 +17,7 @@ function login_user(array $user): void
     $_SESSION['first_name'] = $user['first_name'];
     $_SESSION['last_name']  = $user['last_name'];
     $_SESSION['email']      = $user['email'];
+    $_SESSION['pwd_changed_at'] = $user['password_changed_at'];
 
     get_db()->prepare('UPDATE users SET last_login = NOW() WHERE user_id = ?')
              ->execute([$user['user_id']]);
@@ -72,7 +73,10 @@ function current_tenant(): ?array
  * Redirect to login if nobody is signed in. Also re-checks the
  * account is still active on every request — not just at login —
  * so deactivating someone takes effect immediately instead of
- * waiting for them to eventually log out on their own.
+ * waiting for them to eventually log out on their own. Also logs
+ * out this session if the password was changed elsewhere (e.g. a
+ * forgot-password reset from another device) since that session's
+ * pwd_changed_at snapshot will no longer match the database.
  */
 function require_login(): void
 {
@@ -83,12 +87,16 @@ function require_login(): void
     static $checked = false;
     if (!$checked) {
         $checked = true;
-        $stmt = get_db()->prepare('SELECT is_active FROM users WHERE user_id = ?');
+        $stmt = get_db()->prepare('SELECT is_active, password_changed_at FROM users WHERE user_id = ?');
         $stmt->execute([current_user_id()]);
         $row = $stmt->fetch();
         if (!$row || !$row['is_active']) {
             logout_user();
             redirect('/auth/login.php?deactivated=1');
+        }
+        if ($row['password_changed_at'] !== ($_SESSION['pwd_changed_at'] ?? null)) {
+            logout_user();
+            redirect('/auth/login.php?pwreset=1');
         }
     }
 }

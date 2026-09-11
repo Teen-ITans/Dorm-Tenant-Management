@@ -217,6 +217,32 @@ function handle_upload(string $field, string $subdir, array $allowedExt = ['jpg'
     return 'uploads/' . $subdir . '/' . $filename;
 }
 
+/**
+ * Password policy used by the reset-password screen: at least 8
+ * characters, one uppercase, one lowercase, one digit, one special
+ * character. Returns the first unmet rule as a message, or null if
+ * the password satisfies all of them.
+ */
+function password_policy_error(string $password): ?string
+{
+    if (strlen($password) < 8) {
+        return 'Password needs at least 8 characters.';
+    }
+    if (!preg_match('/[A-Z]/', $password)) {
+        return 'Password needs at least one uppercase letter.';
+    }
+    if (!preg_match('/[a-z]/', $password)) {
+        return 'Password needs at least one lowercase letter.';
+    }
+    if (!preg_match('/[0-9]/', $password)) {
+        return 'Password needs at least one number.';
+    }
+    if (!preg_match('/[^A-Za-z0-9]/', $password)) {
+        return 'Password needs at least one special character.';
+    }
+    return null;
+}
+
 /** Small helper for "8 days left" style countdowns. Negative = already past. */
 function days_until(string $date): int
 {

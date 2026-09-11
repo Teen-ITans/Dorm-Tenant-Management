@@ -26,6 +26,7 @@ CREATE TABLE users (
   password_hash VARCHAR(255) NOT NULL,
   reset_otp         VARCHAR(10) DEFAULT NULL,
   reset_otp_expires DATETIME DEFAULT NULL,
+  password_changed_at DATETIME DEFAULT NULL,
   age           TINYINT UNSIGNED DEFAULT NULL,
   phone         VARCHAR(20)  DEFAULT NULL,
   role          ENUM('admin','tenant') NOT NULL DEFAULT 'tenant',

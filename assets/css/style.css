@@ -248,6 +248,64 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.01em; }
 }
 .input-icon .pw-toggle:hover { color: var(--maroon); }
 
+/* ---------- Password recovery wizard ---------- */
+.recovery-back { display: inline-flex; align-items: center; gap: .4rem; font-size: .85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 1.1rem; }
+.recovery-back:hover { color: var(--maroon); }
+
+.recovery-header { display: flex; align-items: center; gap: .9rem; margin-bottom: 1.1rem; }
+.recovery-icon { width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%; background: var(--maroon-soft); color: var(--maroon); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+.recovery-header h2 { margin: 0; font-size: 1.2rem; }
+.recovery-header .step-caption { font-size: .78rem; color: var(--text-muted); display: flex; align-items: center; gap: .5rem; margin-top: .3rem; }
+.recovery-code-target { color: var(--maroon); font-weight: 700; }
+
+.step-track { display: flex; gap: .3rem; }
+.step-track .bar { width: 1.6rem; height: 4px; border-radius: 999px; background: var(--border); }
+.step-track .bar.active { background: var(--maroon); }
+
+.callout { display: flex; gap: .6rem; align-items: flex-start; padding: .8rem .95rem; border-radius: var(--radius-sm); font-size: .84rem; line-height: 1.45; margin-bottom: 1.1rem; }
+.callout i { font-size: 1rem; margin-top: .15rem; flex-shrink: 0; }
+.callout-info { background: #eaf3fe; color: #2563a8; }
+.callout-info strong { color: #1c4d80; }
+.callout-success { background: #e6f7ee; color: #1a7a4c; }
+
+.otp-boxes { display: flex; gap: .5rem; }
+.otp-box {
+  width: 100%; aspect-ratio: 1; text-align: center; font-size: 1.4rem; font-weight: 700;
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm); color: var(--maroon);
+}
+.otp-box:focus { border-color: var(--maroon); box-shadow: 0 0 0 .18rem rgba(128,0,0,.15); outline: none; }
+.otp-box.filled { border-color: var(--maroon-light); background: var(--maroon-soft); }
+.otp-count { text-align: right; font-size: .74rem; color: var(--text-muted); margin-top: .35rem; }
+
+.resend-row { text-align: center; font-size: .82rem; color: var(--text-muted); margin: .9rem 0 1.3rem; }
+.resend-row button { background: none; border: none; padding: 0; font: inherit; font-weight: 700; color: var(--maroon); cursor: pointer; }
+.resend-row button:disabled { color: var(--text-muted); cursor: default; }
+
+.strength-meter { display: flex; gap: .3rem; margin: .5rem 0 .3rem; }
+.strength-meter .seg { height: 5px; flex: 1; border-radius: 999px; background: var(--border); }
+.strength-label { font-size: .76rem; font-weight: 700; margin-bottom: .8rem; }
+
+.req-checklist { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem .8rem; list-style: none; background: var(--bg); border-radius: var(--radius-sm); padding: .8rem .9rem; font-size: .78rem; margin: 0 0 1.1rem; }
+.req-checklist li { display: flex; align-items: center; gap: .4rem; color: var(--text-muted); }
+.req-checklist li i { font-size: .85rem; }
+.req-checklist li.met { color: #1a9c5c; }
+
+.match-hint { font-size: .78rem; margin-top: .4rem; display: flex; align-items: center; gap: .35rem; min-height: 1.1rem; }
+.match-hint.ok { color: #1a9c5c; }
+.match-hint.bad { color: var(--maroon); }
+
+.wizard-status { display: flex; justify-content: center; gap: 1.2rem; font-size: .72rem; color: var(--text-muted); margin: 1rem 0 1.3rem; }
+.wizard-status span { display: flex; align-items: center; gap: .35rem; }
+.wizard-status .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+.wizard-status span.ok { color: #1a9c5c; }
+.wizard-status span.ok .dot { background: #1a9c5c; }
+
+.recovery-success { text-align: center; }
+.recovery-success .recovery-icon { width: 64px; height: 64px; font-size: 1.7rem; margin: 0 auto 1rem; background: #e6f7ee; color: #1a9c5c; }
+.recovery-success h2 { margin-bottom: .4rem; }
+.recovery-success p.text-muted { margin-bottom: 1.3rem; }
+.recovery-success .callout { text-align: left; }
+
 .demo-login-box { margin-top: 1.3rem; background: rgba(255,255,255,.08); border-radius: var(--radius); padding: 1rem; }
 .demo-login-title { font-size: .74rem; text-transform: uppercase; letter-spacing: .06em; opacity: .75; margin-bottom: .6rem; }
 .demo-login-btn {

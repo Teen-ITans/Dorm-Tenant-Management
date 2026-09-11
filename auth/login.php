@@ -12,6 +12,10 @@ if (isset($_GET['deactivated'])) {
     $errors[] = 'This account has been deactivated. Please contact the administrator.';
 }
 
+if (isset($_GET['pwreset'])) {
+    $errors[] = 'Your password was changed. Please sign in again.';
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
 

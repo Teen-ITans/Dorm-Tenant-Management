@@ -51,26 +51,44 @@ include __DIR__ . '/../includes/header.php';
       <p>Forgot your password? We'll email you a code to reset it.</p>
     </div>
     <div class="auth-panel-right">
-      <h2>Reset Your Password</h2>
+      <a href="<?= BASE_URL ?>/auth/login.php" class="recovery-back"><i class="bi bi-arrow-left"></i> Back to Login</a>
+
+      <div class="recovery-header">
+        <span class="recovery-icon"><i class="bi bi-arrow-repeat"></i></span>
+        <div>
+          <h2>Password Recovery</h2>
+          <div class="step-caption">
+            <span class="step-track"><span class="bar active"></span><span class="bar"></span></span>
+            Step 1 of 2
+          </div>
+        </div>
+      </div>
+
       <?php if ($sent): ?>
-        <p class="text-muted">If that email is registered, we've sent a 6-digit code to it. Enter it on the next page along with your new password.</p>
+        <div class="callout callout-success">
+          <i class="bi bi-check-circle-fill"></i>
+          <div>If that email is registered, we've sent a 6-digit verification code to it. Enter it on the next step along with your new password.</div>
+        </div>
         <a href="<?= BASE_URL ?>/auth/reset_password.php?email=<?= urlencode($oldEmail) ?>" class="btn btn-maroon w-100">Enter Code</a>
         <p class="text-center mt-3 mb-0"><a href="<?= BASE_URL ?>/auth/login.php">Back to Sign In</a></p>
       <?php else: ?>
-        <p class="text-muted">Enter the email on your account and we'll send you a verification code.</p>
+        <div class="callout callout-info">
+          <i class="bi bi-info-circle-fill"></i>
+          <div>Enter your <strong>registered email address</strong> and we will send a 6-digit verification code.</div>
+        </div>
         <?php if ($msg = flash('error')): ?><div class="alert alert-danger"><?= clean($msg) ?></div><?php endif; ?>
         <form method="post" class="needs-validation" novalidate>
           <?= csrf_field() ?>
           <div class="mb-3">
-            <label class="form-label">Email Address</label>
+            <label class="form-label">Registered Email Address <span class="text-danger">*</span></label>
             <div class="input-icon">
               <span class="icon-prefix"><i class="bi bi-envelope-fill"></i></span>
               <input type="email" name="email" class="form-control" placeholder="Enter your email" value="<?= clean($oldEmail) ?>" required autofocus>
             </div>
           </div>
-          <button type="submit" class="btn btn-maroon w-100">Send Code</button>
+          <button type="submit" class="btn btn-maroon w-100">Send Verification Code</button>
         </form>
-        <p class="text-center mt-3 mb-0"><a href="<?= BASE_URL ?>/auth/login.php">Back to Sign In</a></p>
+        <p class="text-center mt-3 mb-0">Remembered your password? <a href="<?= BASE_URL ?>/auth/login.php">Sign in</a></p>
       <?php endif; ?>
     </div>
   </div>
