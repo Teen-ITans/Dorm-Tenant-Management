@@ -27,6 +27,32 @@ document.addEventListener('DOMContentLoaded', function () {
     }, 6000);
   });
 
+  // ---- Show/hide toggle on every password field ------------------------
+  document.querySelectorAll('input[type="password"]').forEach(function (input) {
+    let wrapper = input.parentElement;
+    if (!wrapper.classList.contains('input-icon')) {
+      wrapper = document.createElement('div');
+      wrapper.className = 'input-icon';
+      input.parentNode.insertBefore(wrapper, input);
+      wrapper.appendChild(input);
+    }
+
+    input.classList.add('has-pw-toggle');
+
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'pw-toggle';
+    toggle.setAttribute('aria-label', 'Show password');
+    toggle.innerHTML = '<i class="bi bi-eye"></i>';
+    toggle.addEventListener('click', function () {
+      const showing = input.type === 'text';
+      input.type = showing ? 'password' : 'text';
+      toggle.innerHTML = showing ? '<i class="bi bi-eye"></i>' : '<i class="bi bi-eye-slash"></i>';
+      toggle.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+    });
+    wrapper.appendChild(toggle);
+  });
+
   // ---- Demo login quick-fill (login page only) ------------------------
   document.querySelectorAll('.demo-login-btn').forEach(function (btn) {
     btn.addEventListener('click', function () {
