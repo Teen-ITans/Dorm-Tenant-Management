@@ -19,6 +19,7 @@ $recentlyProcessed = $db->query("
     JOIN users u ON u.user_id = t.user_id
     LEFT JOIN dorm_rooms r ON r.room_id = t.room_id
     WHERE t.approval_status IN ('Approved','Rejected')
+      AND t.tenant_id NOT IN (SELECT tenant_id FROM dismissed_records WHERE page = 'approval')
     ORDER BY t.date_registered DESC
     LIMIT 5
 ")->fetchAll();
@@ -61,7 +62,21 @@ include __DIR__ . '/../includes/header.php';
 </div>
 
 <div class="panel mt-2">
-  <div class="panel-header"><h2>Recently Processed</h2></div>
+  <div class="panel-header">
+    <h2>Recently Processed</h2>
+    <?php if ($recentlyProcessed): ?>
+    <div class="dropdown">
+      <button class="btn btn-sm btn-outline-maroon dropdown-toggle" type="button" data-bs-toggle="dropdown"><i class="bi bi-eraser-fill"></i> Clear</button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li><h6 class="dropdown-header">Clear from this view only</h6></li>
+        <li><form method="post" onsubmit="return confirm('Clear Approved entries from this view? They stay in the database for reports.');"><?= csrf_field() ?><input type="hidden" name="action" value="clear_view"><input type="hidden" name="page" value="approval"><input type="hidden" name="filter" value="Approved"><button class="dropdown-item" type="submit">Clear Approved only</button></form></li>
+        <li><form method="post" onsubmit="return confirm('Clear Rejected entries from this view? They stay in the database for reports.');"><?= csrf_field() ?><input type="hidden" name="action" value="clear_view"><input type="hidden" name="page" value="approval"><input type="hidden" name="filter" value="Rejected"><button class="dropdown-item" type="submit">Clear Rejected only</button></form></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><form method="post" onsubmit="return confirm('Clear ALL recently processed entries from this view? They stay in the database for reports.');"><?= csrf_field() ?><input type="hidden" name="action" value="clear_view"><input type="hidden" name="page" value="approval"><input type="hidden" name="filter" value="all"><button class="dropdown-item" type="submit">Clear all</button></form></li>
+      </ul>
+    </div>
+    <?php endif; ?>
+  </div>
   <?php if (!$recentlyProcessed): ?>
     <p class="text-muted py-3">Nothing processed yet.</p>
   <?php endif; ?>

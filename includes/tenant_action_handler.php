@@ -18,6 +18,56 @@ if (!defined('BASE_URL')) { http_response_code(403); exit('Direct access not per
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
     $action   = $_POST['action'] ?? '';
+
+    /**
+     * "Clear" on Registration/Approval, Track Status, and Check-in/
+     * Check-out only hides rows from that one page — it records the
+     * (page, tenant) pair in dismissed_records so that page's query can
+     * filter it out. Nothing in tenants/contracts/payments is touched,
+     * so reports and analytics keep seeing every record.
+     */
+    if ($action === 'clear_view') {
+        $page   = $_POST['page'] ?? '';
+        $filter = $_POST['filter'] ?? 'all';
+
+        // column = which tenants column the filter value matches; extra = an
+        // always-applied condition scoping this page's own base query;
+        // limit/order mirror the page's own query so "clear" only ever
+        // touches what that page could actually show.
+        $pageConfig = [
+            'approval'   => ['statuses' => ['Approved', 'Rejected'], 'column' => 'approval_status', 'extra' => null, 'limit' => 5, 'order' => 't.date_registered DESC'],
+            'status'     => ['statuses' => ['Active', 'Pending', 'Checked Out', 'Evicted'], 'column' => 'status', 'extra' => "t.approval_status = 'Approved'", 'limit' => null, 'order' => null],
+            'checkinout' => ['statuses' => ['Active', 'Checked Out'], 'column' => 'status', 'extra' => "t.status IN ('Active','Checked Out')", 'limit' => null, 'order' => null],
+        ];
+
+        $cfg = $pageConfig[$page] ?? null;
+        $statuses = $cfg ? ($filter === 'all' ? $cfg['statuses'] : array_intersect([$filter], $cfg['statuses'])) : [];
+
+        if ($cfg && $statuses) {
+            $placeholders = implode(',', array_fill(0, count($statuses), '?'));
+            $sql = "SELECT t.tenant_id FROM tenants t
+                    WHERE t.tenant_id NOT IN (SELECT tenant_id FROM dismissed_records WHERE page = ?)
+                      AND t.{$cfg['column']} IN ($placeholders)"
+                 . ($cfg['extra'] ? " AND {$cfg['extra']}" : '')
+                 . ($cfg['order'] ? " ORDER BY {$cfg['order']}" : '')
+                 . ($cfg['limit'] ? " LIMIT {$cfg['limit']}" : '');
+
+            $stmt = $db->prepare($sql);
+            $stmt->execute(array_merge([$page], array_values($statuses)));
+            $ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+            $insert = $db->prepare('INSERT IGNORE INTO dismissed_records (page, tenant_id) VALUES (?, ?)');
+            foreach ($ids as $id) {
+                $insert->execute([$page, $id]);
+            }
+            flash('success', count($ids) . ' record(s) cleared from view. They remain in the database for reports.');
+        } else {
+            flash('error', 'Invalid clear request.');
+        }
+
+        redirect($selfPath);
+    }
+
     $tenantId = (int) ($_POST['tenant_id'] ?? 0);
 
     $tenantStmt = $db->prepare("SELECT t.*, u.first_name, u.last_name, u.email FROM tenants t JOIN users u ON u.user_id = t.user_id WHERE t.tenant_id = ?");

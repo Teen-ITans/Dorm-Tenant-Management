@@ -17,8 +17,10 @@ $result = paginate(
      JOIN users u ON u.user_id = t.user_id
      LEFT JOIN dorm_rooms r ON r.room_id = t.room_id
      WHERE t.status IN ('Active','Checked Out')
+       AND t.tenant_id NOT IN (SELECT tenant_id FROM dismissed_records WHERE page = 'checkinout')
      ORDER BY FIELD(t.status,'Active','Checked Out'), t.checkin_date DESC",
-    "SELECT COUNT(*) c FROM tenants t WHERE t.status IN ('Active','Checked Out')"
+    "SELECT COUNT(*) c FROM tenants t WHERE t.status IN ('Active','Checked Out')
+       AND t.tenant_id NOT IN (SELECT tenant_id FROM dismissed_records WHERE page = 'checkinout')"
 );
 $records = $result['rows'];
 
@@ -34,7 +36,21 @@ include __DIR__ . '/../includes/header.php';
 </div>
 
 <div class="panel mt-2">
-  <div class="panel-header"><h2>All Records</h2></div>
+  <div class="panel-header">
+    <h2>All Records</h2>
+    <?php if ($records): ?>
+    <div class="dropdown">
+      <button class="btn btn-sm btn-outline-maroon dropdown-toggle" type="button" data-bs-toggle="dropdown"><i class="bi bi-eraser-fill"></i> Clear</button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li><h6 class="dropdown-header">Clear from this view only</h6></li>
+        <li><form method="post" onsubmit="return confirm('Clear Checked In records from this view? They stay in the database for reports.');"><?= csrf_field() ?><input type="hidden" name="action" value="clear_view"><input type="hidden" name="page" value="checkinout"><input type="hidden" name="filter" value="Active"><button class="dropdown-item" type="submit">Clear Checked In only</button></form></li>
+        <li><form method="post" onsubmit="return confirm('Clear Checked Out records from this view? They stay in the database for reports.');"><?= csrf_field() ?><input type="hidden" name="action" value="clear_view"><input type="hidden" name="page" value="checkinout"><input type="hidden" name="filter" value="Checked Out"><button class="dropdown-item" type="submit">Clear Checked Out only</button></form></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><form method="post" onsubmit="return confirm('Clear ALL records from this view? They stay in the database for reports.');"><?= csrf_field() ?><input type="hidden" name="action" value="clear_view"><input type="hidden" name="page" value="checkinout"><input type="hidden" name="filter" value="all"><button class="dropdown-item" type="submit">Clear all</button></form></li>
+      </ul>
+    </div>
+    <?php endif; ?>
+  </div>
   <div class="table-responsive">
     <table class="table app-table align-middle">
       <thead><tr><th>Tenant</th><th>Room</th><th>Check-in Date</th><th>Check-out Date</th><th>Key Return</th><th>Status</th><th class="text-end">Actions</th></tr></thead>

@@ -33,8 +33,9 @@ $categories = [
             <div><h3><?= clean($r['title']) ?></h3><p><?= clean($r['desc']) ?></p></div>
           </div>
           <div class="report-card-actions">
+            <a href="<?= BASE_URL ?>/admin/report_print.php?type=<?= $key ?>&mode=view" target="_blank" class="btn btn-outline-maroon"><i class="bi bi-eye-fill"></i> Review</a>
             <a href="<?= BASE_URL ?>/admin/report_print.php?type=<?= $key ?>" target="_blank" class="btn btn-maroon"><i class="bi bi-printer-fill"></i> Print</a>
-            <a href="<?= BASE_URL ?>/admin/report_print.php?type=<?= $key ?>" target="_blank" class="btn btn-outline-maroon">⬇ Export PDF</a>
+            <a href="<?= BASE_URL ?>/admin/report_export.php?type=<?= $key ?>" class="btn btn-outline-maroon"><i class="bi bi-file-earmark-pdf-fill"></i> Export PDF</a>
           </div>
         </div>
       <?php endforeach; ?>
@@ -42,9 +43,5 @@ $categories = [
   <?php endforeach; ?>
 </div>
 
-<p class="text-muted small mt-3">
-  "Export PDF" opens the same print-friendly view — use your browser's Print dialog and choose "Save as PDF" as the
-  destination. (For a one-click export instead, add a library such as
-  <a href="https://github.com/dompdf/dompdf" target="_blank">Dompdf</a> and feed it the same query used in <code>report_print.php</code>.)
-</p>
+<p class="text-muted small mt-3">"Review" opens the report on-screen to look over. "Print" opens the same view and sends it straight to your printer dialog. "Export PDF" downloads the report as a PDF file instead.</p>
 <?php include __DIR__ . '/../includes/footer.php'; ?>

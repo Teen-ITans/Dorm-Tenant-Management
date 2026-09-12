@@ -84,6 +84,19 @@ CREATE TABLE tenants (
   INDEX idx_tenant_room (room_id)
 ) ENGINE=InnoDB;
 
+-- (page, tenant) pairs an admin cleared from the Registration/Approval,
+-- Track Status, or Check-in/Check-out views. Hides the row from that
+-- one page only — the tenant/payment/contract data underneath is
+-- untouched, so reports still see everything.
+CREATE TABLE dismissed_records (
+  id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  page         VARCHAR(40) NOT NULL,
+  tenant_id    INT UNSIGNED NOT NULL,
+  dismissed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_dismissed (page, tenant_id),
+  CONSTRAINT fk_dismissed_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(tenant_id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 -- ---------------------------------------------------------------------
 -- 4. CONTRACTS — one row per lease term.
 --    Split out from "payments" (see note below) because one contract

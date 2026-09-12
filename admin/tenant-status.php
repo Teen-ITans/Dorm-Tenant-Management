@@ -19,8 +19,10 @@ $result = paginate(
      JOIN users u ON u.user_id = t.user_id
      LEFT JOIN dorm_rooms r ON r.room_id = t.room_id
      WHERE t.approval_status = 'Approved'
+       AND t.tenant_id NOT IN (SELECT tenant_id FROM dismissed_records WHERE page = 'status')
      ORDER BY FIELD(t.status,'Active','Pending','Evicted','Checked Out'), u.first_name",
-    "SELECT COUNT(*) c FROM tenants t WHERE t.approval_status = 'Approved'"
+    "SELECT COUNT(*) c FROM tenants t WHERE t.approval_status = 'Approved'
+       AND t.tenant_id NOT IN (SELECT tenant_id FROM dismissed_records WHERE page = 'status')"
 );
 $allTenants = $result['rows'];
 
@@ -37,6 +39,22 @@ include __DIR__ . '/../includes/header.php';
 </div>
 
 <div class="panel mt-2">
+  <div class="panel-header">
+    <h2>All Tenants</h2>
+    <?php if ($allTenants): ?>
+    <div class="dropdown">
+      <button class="btn btn-sm btn-outline-maroon dropdown-toggle" type="button" data-bs-toggle="dropdown"><i class="bi bi-eraser-fill"></i> Clear</button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li><h6 class="dropdown-header">Clear from this view only</h6></li>
+        <?php foreach (['Active', 'Pending', 'Checked Out', 'Evicted'] as $s): ?>
+          <li><form method="post" onsubmit="return confirm('Clear <?= clean($s) ?> tenants from this view? They stay in the database for reports.');"><?= csrf_field() ?><input type="hidden" name="action" value="clear_view"><input type="hidden" name="page" value="status"><input type="hidden" name="filter" value="<?= clean($s) ?>"><button class="dropdown-item" type="submit">Clear <?= clean($s) ?> only</button></form></li>
+        <?php endforeach; ?>
+        <li><hr class="dropdown-divider"></li>
+        <li><form method="post" onsubmit="return confirm('Clear ALL tenants from this view? They stay in the database for reports.');"><?= csrf_field() ?><input type="hidden" name="action" value="clear_view"><input type="hidden" name="page" value="status"><input type="hidden" name="filter" value="all"><button class="dropdown-item" type="submit">Clear all</button></form></li>
+      </ul>
+    </div>
+    <?php endif; ?>
+  </div>
   <div class="table-responsive">
     <table class="table app-table align-middle">
       <thead><tr><th>Tenant</th><th>Room</th><th>Status</th><th>Contract Period</th><th>Details</th><th class="text-end">Actions</th></tr></thead>
