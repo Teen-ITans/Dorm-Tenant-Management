@@ -78,6 +78,8 @@ include __DIR__ . '/../includes/header.php';
         <span class="badge badge-<?= $r['approval_status'] === 'Approved' ? 'success' : 'danger' ?>"><?= clean($r['approval_status']) ?></span>
         <?php if ($r['approval_status'] === 'Rejected'): ?>
           <form method="post" class="d-inline mt-1 d-block"><?= csrf_field() ?><input type="hidden" name="action" value="reconsider"><input type="hidden" name="tenant_id" value="<?= $r['tenant_id'] ?>"><button class="btn btn-sm btn-outline-maroon">Reconsider</button></form>
+        <?php elseif ($r['approval_status'] === 'Approved' && !$r['room_number']): ?>
+          <a href="<?= BASE_URL ?>/admin/rooms.php?tenant=<?= $r['tenant_id'] ?>#rooms" class="btn btn-sm btn-maroon mt-1 d-block">Assign Room</a>
         <?php endif; ?>
       </div>
     </div>
