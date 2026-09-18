@@ -141,14 +141,21 @@ include __DIR__ . '/../includes/header.php';
       <div class="panel-header"><h2>Payment Status</h2></div>
       <div class="table-responsive">
         <table class="table app-table align-middle">
-          <thead><tr><th>Tenant</th><th>Month</th><th>Amount</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
+          <thead><tr><th>Tenant</th><th>Month</th><th>Amount</th><th>Method</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
           <tbody>
-          <?php if (!$payments): ?><tr><td colspan="5" class="text-center text-muted py-4">No payments recorded yet.</td></tr><?php endif; ?>
+          <?php if (!$payments): ?><tr><td colspan="6" class="text-center text-muted py-4">No payments recorded yet.</td></tr><?php endif; ?>
           <?php foreach ($payments as $p): ?>
             <tr>
               <td><?= clean($p['first_name'] . ' ' . $p['last_name']) ?><div class="text-muted small"><?= $p['room_number'] ? 'Room ' . clean($p['room_number']) : '' ?></div></td>
               <td class="small"><?= clean($p['payment_for_month'] ?: '—') ?></td>
               <td><?= peso($p['payment_amount']) ?></td>
+              <td class="small">
+                <?php if (str_starts_with((string) $p['payment_method'], 'PayMongo')): ?>
+                  <span class="badge badge-info"><i class="bi bi-credit-card-fill"></i> <?= clean($p['payment_method']) ?></span>
+                <?php else: ?>
+                  <?= clean($p['payment_method'] ?: '—') ?>
+                <?php endif; ?>
+              </td>
               <td><span class="badge badge-<?= status_badge_class($p['payment_status']) ?>"><?= clean($p['payment_status']) ?></span></td>
               <td class="text-end">
                 <?php if ($p['payment_status'] !== 'Paid'): ?>

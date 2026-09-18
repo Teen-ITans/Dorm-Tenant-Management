@@ -135,6 +135,7 @@ CREATE TABLE payments (
   payment_status    ENUM('Pending','Paid','Overdue') NOT NULL DEFAULT 'Pending',
   payment_method    VARCHAR(50) DEFAULT NULL,     -- Cash / GCash / Bank Transfer ...
   reference_no      VARCHAR(100) DEFAULT NULL,
+  paymongo_checkout_id VARCHAR(100) DEFAULT NULL, -- set when paid online via PayMongo Checkout
   receipt_file      VARCHAR(255) DEFAULT NULL,
   reminder_sent     BOOLEAN NOT NULL DEFAULT FALSE,
   created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

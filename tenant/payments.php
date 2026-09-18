@@ -51,11 +51,38 @@ include __DIR__ . '/../includes/header.php';
 
 <div class="row g-4">
   <div class="col-lg-5">
+    <?php if ($contract): ?>
     <div class="panel">
-      <div class="panel-header"><h2>Send Payment</h2></div>
+      <div class="panel-header">
+        <h2>Pay Online</h2>
+        <span class="badge badge-outline">Test Mode</span>
+      </div>
+      <?php if (!paymongo_configured()): ?>
+        <p class="text-muted small py-2">Online payment isn't set up yet — use "Submit Payment Manually" instead.</p>
+      <?php else: ?>
+        <p class="text-muted small">Pay instantly with GCash, Maya, or a card via PayMongo (test mode — no real money moves).</p>
+        <form method="post" action="<?= BASE_URL ?>/tenant/pay_paymongo.php">
+          <?= csrf_field() ?>
+          <div class="mb-3">
+            <label class="form-label">Payment Month</label>
+            <input type="text" class="form-control" name="payment_for_month" placeholder="e.g. June 2026" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Amount (₱)</label>
+            <input type="number" step="0.01" min="0" class="form-control" name="payment_amount" value="<?= $contract['monthly_rent'] ?>" required>
+          </div>
+          <button class="btn btn-maroon w-100"><i class="bi bi-credit-card-fill"></i> Pay with PayMongo</button>
+        </form>
+      <?php endif; ?>
+    </div>
+    <?php endif; ?>
+
+    <div class="panel mt-2">
+      <div class="panel-header"><h2>Submit Payment Manually</h2></div>
       <?php if (!$contract): ?>
         <p class="text-muted py-3">You don't have an active contract yet, so there's nothing to pay against right now.</p>
       <?php else: ?>
+        <p class="text-muted small">Already paid in cash, bank transfer, or another way? Log it here for the office to verify.</p>
         <form method="post" enctype="multipart/form-data">
           <?= csrf_field() ?>
           <div class="mb-3">
@@ -89,7 +116,7 @@ include __DIR__ . '/../includes/header.php';
               <input type="file" name="receipt_file" accept="image/*,application/pdf">
             </label>
           </div>
-          <button class="btn btn-maroon w-100">Submit Payment</button>
+          <button class="btn btn-outline-maroon w-100">Submit Payment</button>
         </form>
       <?php endif; ?>
     </div>

@@ -38,6 +38,18 @@ function redirect(string $path): void
 }
 
 /**
+ * Builds a full scheme+host URL for a BASE_URL-relative path. Needed
+ * for callback URLs handed to an external service (e.g. PayMongo's
+ * success_url/cancel_url) — those can't be sent a host-relative path
+ * since the browser is redirected there from paymongo.com, not here.
+ */
+function absolute_url(string $path): string
+{
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    return $scheme . '://' . $_SERVER['HTTP_HOST'] . BASE_URL . $path;
+}
+
+/**
  * Run a paginated SELECT. $baseSql must NOT include LIMIT/OFFSET —
  * this appends them. $countSql is the matching "how many rows total"
  * query (same WHERE clause, just COUNT(*) instead of the real
