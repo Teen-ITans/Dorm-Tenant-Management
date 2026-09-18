@@ -378,7 +378,47 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.01em; }
 
 /* ---------- Contracts / notifications lists ---------- */
 .contract-list { display: flex; flex-direction: column; gap: .8rem; }
+<<<<<<< HEAD
 .contract-item { display: flex; justify-content: space-between; align-items: flex-start; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .8rem; gap: .6rem; }
+=======
+.contract-item { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .8rem; gap: .6rem; }
+/* A lapsed lease needs a decision, so it reads louder than the rest. */
+.contract-item.is-expired { border-left: 3px solid var(--red-text); background: #fffafa; }
+.contract-item.is-expiring { border-left: 3px solid var(--amber-text); }
+.contract-actions { flex: 1 0 100%; display: flex; flex-wrap: wrap; gap: .4rem; padding-top: .7rem; border-top: 1px dashed var(--border); }
+.contract-summary { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .9rem; }
+.quick-term-buttons { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
+
+/* ---------- Rent status (tenant home) ---------- */
+.rent-status-card {
+  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .8rem;
+  border: 1px solid var(--border); border-left-width: 4px; border-radius: var(--radius);
+  background: var(--card-bg); padding: 1.1rem 1.3rem; margin-top: 1rem;
+}
+.rent-status-label { font-size: .78rem; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; color: var(--text-muted); }
+.rent-status-amount { font-size: 1.6rem; font-weight: 800; line-height: 1.2; }
+.rent-status-note { font-size: .82rem; color: var(--text-muted); margin-top: .15rem; }
+.rent-status-side { display: flex; flex-direction: column; align-items: flex-end; gap: .5rem; }
+.rent-status-pill {
+  display: inline-flex; align-items: center; gap: .45rem;
+  font-size: .85rem; font-weight: 700; padding: .42em .95em; border-radius: 999px;
+}
+.rent-status-dot { width: .6rem; height: .6rem; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+.rent-status-card.is-paid    { border-left-color: var(--green-text); }
+.rent-status-card.is-paid    .rent-status-pill { background: var(--green-bg); color: var(--green-text); }
+.rent-status-card.is-paid    .rent-status-amount { color: var(--green-text); }
+.rent-status-card.is-pending { border-left-color: var(--amber-text); }
+.rent-status-card.is-pending .rent-status-pill { background: var(--amber-bg); color: var(--amber-text); }
+.rent-status-card.is-due     { border-left-color: var(--red-text); }
+.rent-status-card.is-due     .rent-status-pill { background: var(--red-bg); color: var(--red-text); }
+.rent-status-card.is-none    { border-left-color: var(--gray-text); }
+.rent-status-card.is-none    .rent-status-pill { background: var(--gray-bg); color: var(--gray-text); }
+
+@media (max-width: 575.98px) {
+  .rent-status-side { align-items: flex-start; width: 100%; }
+}
+>>>>>>> origin/james
 
 .notification-item { display: flex; gap: .8rem; padding: .9rem; border-radius: var(--radius-sm); margin-bottom: .6rem; background: var(--bg); }
 .notification-item:last-child { margin-bottom: 0; }

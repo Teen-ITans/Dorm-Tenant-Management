@@ -17,10 +17,15 @@ $result = paginate(
      JOIN users u ON u.user_id = t.user_id
      LEFT JOIN dorm_rooms r ON r.room_id = t.room_id
      WHERE t.status IN ('Active','Checked Out')
+<<<<<<< HEAD
        AND t.tenant_id NOT IN (SELECT tenant_id FROM dismissed_records WHERE page = 'checkinout')
      ORDER BY FIELD(t.status,'Active','Checked Out'), t.checkin_date DESC",
     "SELECT COUNT(*) c FROM tenants t WHERE t.status IN ('Active','Checked Out')
        AND t.tenant_id NOT IN (SELECT tenant_id FROM dismissed_records WHERE page = 'checkinout')"
+=======
+     ORDER BY FIELD(t.status,'Active','Checked Out'), t.checkin_date DESC",
+    "SELECT COUNT(*) c FROM tenants t WHERE t.status IN ('Active','Checked Out')"
+>>>>>>> origin/james
 );
 $records = $result['rows'];
 
@@ -36,6 +41,7 @@ include __DIR__ . '/../includes/header.php';
 </div>
 
 <div class="panel mt-2">
+<<<<<<< HEAD
   <div class="panel-header">
     <h2>All Records</h2>
     <?php if ($records): ?>
@@ -51,6 +57,9 @@ include __DIR__ . '/../includes/header.php';
     </div>
     <?php endif; ?>
   </div>
+=======
+  <div class="panel-header"><h2>All Records</h2></div>
+>>>>>>> origin/james
   <div class="table-responsive">
     <table class="table app-table align-middle">
       <thead><tr><th>Tenant</th><th>Room</th><th>Check-in Date</th><th>Check-out Date</th><th>Key Return</th><th>Status</th><th class="text-end">Actions</th></tr></thead>

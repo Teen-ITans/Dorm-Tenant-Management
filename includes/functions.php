@@ -38,6 +38,7 @@ function redirect(string $path): void
 }
 
 /**
+<<<<<<< HEAD
  * Builds a full scheme+host URL for a BASE_URL-relative path. Needed
  * for callback URLs handed to an external service (e.g. PayMongo's
  * success_url/cancel_url) — those can't be sent a host-relative path
@@ -50,6 +51,8 @@ function absolute_url(string $path): string
 }
 
 /**
+=======
+>>>>>>> origin/james
  * Run a paginated SELECT. $baseSql must NOT include LIMIT/OFFSET —
  * this appends them. $countSql is the matching "how many rows total"
  * query (same WHERE clause, just COUNT(*) instead of the real
@@ -167,6 +170,10 @@ function status_badge_class(string $status): string
         'Reserved'    => 'info',
         'Expiring Soon' => 'warning',
         'Overdue'     => 'danger',
+<<<<<<< HEAD
+=======
+        'Failed'      => 'danger',
+>>>>>>> origin/james
         'Evicted'     => 'danger',
         'Rejected'    => 'danger',
         'Expired'     => 'danger',
@@ -262,3 +269,233 @@ function days_until(string $date): int
     $today  = new DateTime('today');
     return (int) $today->diff($target)->format('%r%a');
 }
+<<<<<<< HEAD
+=======
+
+/* =====================================================================
+   Contract lifecycle helpers
+   ===================================================================== */
+
+/**
+ * Keep `contracts.contract_status` in step with the calendar.
+ *
+ * Nothing used to move a lease along on its own — a contract whose end
+ * date had long passed still read "Active" everywhere. These three
+ * statements do that bookkeeping, and they're idempotent, so calling
+ * this at the top of any page that reads contract statuses is safe.
+ * A static guard keeps it to one pass per request no matter how many
+ * times it's called.
+ *
+ * 'Terminated' is deliberately never touched — that's an admin
+ * decision, not something a date should be able to undo.
+ */
+function refresh_contract_statuses(PDO $db): void
+{
+    static $done = false;
+    if ($done) {
+        return;
+    }
+    $done = true;
+
+    try {
+        // Term has run its course.
+        $db->exec("UPDATE contracts SET contract_status = 'Expired'
+                    WHERE contract_status IN ('Active','Expiring Soon') AND contract_end < CURDATE()");
+
+        // Inside the 30-day warning window.
+        $db->exec("UPDATE contracts SET contract_status = 'Expiring Soon'
+                    WHERE contract_status = 'Active'
+                      AND contract_end BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)");
+
+        // Renewed back out past the warning window.
+        $db->exec("UPDATE contracts SET contract_status = 'Active'
+                    WHERE contract_status = 'Expiring Soon'
+                      AND contract_end > DATE_ADD(CURDATE(), INTERVAL 30 DAY)");
+    } catch (PDOException $e) {
+        // Never let status bookkeeping take a page down with it.
+        error_log('refresh_contract_statuses failed: ' . $e->getMessage());
+    }
+}
+
+/**
+ * The lease a tenant is currently living under — including one that has
+ * already expired, because an expired contract is exactly the case that
+ * needs a "Renew" prompt rather than a blank screen. Only a Terminated
+ * lease is treated as gone for good.
+ */
+function tenant_current_contract(PDO $db, int $tenantId): ?array
+{
+    $stmt = $db->prepare("
+        SELECT * FROM contracts
+        WHERE tenant_id = ? AND contract_status IN ('Active','Expiring Soon','Expired')
+        ORDER BY FIELD(contract_status,'Active','Expiring Soon','Expired'), contract_end DESC
+        LIMIT 1
+    ");
+    $stmt->execute([$tenantId]);
+    return $stmt->fetch() ?: null;
+}
+
+/** True when a lease has run past its end date and needs renewing or ending. */
+function contract_is_expired(?array $contract): bool
+{
+    return $contract !== null
+        && ($contract['contract_status'] === 'Expired' || days_until($contract['contract_end']) < 0);
+}
+
+/* =====================================================================
+   Rent / billing-month helpers
+   ===================================================================== */
+
+/** The billing month we're in right now, in the app's canonical "June 2026" form. */
+function current_billing_month(): string
+{
+    return date('F Y');
+}
+
+/**
+ * Canonical list of billing months for a <select>, newest-relevant
+ * first. Free-typed months ("Sept 2026" vs "September 2026") made it
+ * impossible to tell reliably whether this month's rent was settled,
+ * so the pay forms pick from this list instead.
+ */
+function billing_month_options(int $monthsBack = 3, int $monthsForward = 3): array
+{
+    $months = [];
+    for ($i = -$monthsBack; $i <= $monthsForward; $i++) {
+        $months[] = date('F Y', strtotime(date('Y-m-01') . ' ' . $i . ' month'));
+    }
+    return $months;
+}
+
+/**
+ * Work out where this tenant stands on THIS month's rent.
+ *
+ * Returns:
+ *   state   — 'Paid' | 'Pending' | 'Overdue' | 'Due' | 'None'
+ *   label   — what to show the tenant ("Paid", "Unpaid / Due", ...)
+ *   badge   — status_badge_class() suffix ('success', 'warning', 'danger')
+ *   amount  — the amount in question
+ *   month   — the billing month this describes
+ *   payment — the matching payments row, if there is one
+ *
+ * A month is matched on `payment_for_month` (case/space-insensitive),
+ * falling back to a row's own payment/due date for older rows that
+ * never had the month filled in. Paid rows win over Pending ones, so a
+ * retried payment can't drag a settled month back to unpaid.
+ */
+function tenant_rent_status(PDO $db, int $tenantId, ?array $contract = null): array
+{
+    $month = current_billing_month();
+
+    if (!$contract) {
+        return ['state' => 'None', 'label' => 'No active contract', 'badge' => 'secondary',
+                'amount' => 0.0, 'month' => $month, 'payment' => null];
+    }
+
+    $stmt = $db->prepare("
+        SELECT * FROM payments
+        WHERE tenant_id = ?
+          AND (
+                LOWER(TRIM(COALESCE(payment_for_month,''))) = LOWER(?)
+             OR (
+                  (payment_for_month IS NULL OR payment_for_month = '')
+                  AND DATE_FORMAT(COALESCE(payment_date, due_date, created_at), '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+                )
+          )
+        ORDER BY FIELD(payment_status,'Paid','Overdue','Pending','Failed'), payment_id DESC
+        LIMIT 1
+    ");
+    $stmt->execute([$tenantId, $month]);
+    $payment = $stmt->fetch() ?: null;
+
+    $amount = (float) ($payment['payment_amount'] ?? $contract['monthly_rent']);
+
+    if ($payment && $payment['payment_status'] === 'Paid') {
+        return ['state' => 'Paid', 'label' => 'Paid', 'badge' => 'success',
+                'amount' => $amount, 'month' => $month, 'payment' => $payment];
+    }
+    if ($payment && $payment['payment_status'] === 'Overdue') {
+        return ['state' => 'Overdue', 'label' => 'Overdue', 'badge' => 'danger',
+                'amount' => $amount, 'month' => $month, 'payment' => $payment];
+    }
+    if ($payment && $payment['payment_status'] === 'Pending') {
+        return ['state' => 'Pending', 'label' => 'Payment processing', 'badge' => 'warning',
+                'amount' => $amount, 'month' => $month, 'payment' => $payment];
+    }
+
+    // No row at all, or only a Failed attempt — either way it's still owed.
+    return ['state' => 'Due', 'label' => 'Unpaid / Due', 'badge' => 'danger',
+            'amount' => (float) $contract['monthly_rent'], 'month' => $month, 'payment' => $payment];
+}
+
+/**
+ * Confirm this tenant's still-Pending GCash payments straight from
+ * PayMongo, so the portal updates itself.
+ *
+ * webhooks/paymongo.php remains the primary confirmation path, but it
+ * needs a publicly reachable URL — which a localhost XAMPP install
+ * doesn't have. This closes that gap by asking PayMongo about each
+ * open checkout the next time the tenant loads a page. It is
+ * deliberately conservative:
+ *   - only rows that actually went through GCash (a checkout id) and
+ *     are still 'Pending'
+ *   - only attempts from the last 24 hours, so old dead rows aren't
+ *     re-polled forever
+ *   - at most 3 lookups per request, and every failure is swallowed,
+ *     so a slow or unreachable PayMongo never blocks the page
+ *
+ * Returns the number of payments newly marked Paid.
+ */
+function sync_pending_gcash_payments(PDO $db, int $tenantId): int
+{
+    static $seen = [];
+    if (isset($seen[$tenantId])) {
+        return 0;
+    }
+    $seen[$tenantId] = true;
+
+    $stmt = $db->prepare("
+        SELECT payment_id, paymongo_checkout_id
+        FROM payments
+        WHERE tenant_id = ?
+          AND payment_status = 'Pending'
+          AND paymongo_checkout_id IS NOT NULL
+          AND created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
+        ORDER BY payment_id DESC
+        LIMIT 3
+    ");
+    $stmt->execute([$tenantId]);
+    $openPayments = $stmt->fetchAll();
+
+    $confirmed = 0;
+    foreach ($openPayments as $row) {
+        try {
+            $session = paymongo_get_checkout_session($row['paymongo_checkout_id']);
+            $result  = paymongo_checkout_payment_status($session);
+        } catch (Throwable $e) {
+            error_log('GCash status check failed for payment ' . $row['payment_id'] . ': ' . $e->getMessage());
+            continue;
+        }
+
+        if ($result['status'] === 'paid') {
+            // Same "don't double-process" guard the webhook uses, so
+            // whichever path gets there first wins and the other is a
+            // no-op instead of a second confirmation.
+            $updated = $db->prepare("
+                UPDATE payments
+                   SET payment_status = 'Paid',
+                       payment_date = CURDATE(),
+                       paymongo_payment_id = COALESCE(paymongo_payment_id, ?)
+                 WHERE payment_id = ? AND payment_status != 'Paid'
+            ");
+            $updated->execute([$result['payment_id'], $row['payment_id']]);
+            $confirmed += $updated->rowCount();
+        } elseif ($result['status'] === 'failed') {
+            $db->prepare("UPDATE payments SET payment_status = 'Failed' WHERE payment_id = ? AND payment_status = 'Pending'")
+               ->execute([$row['payment_id']]);
+        }
+    }
+
+    return $confirmed;
+}
+>>>>>>> origin/james

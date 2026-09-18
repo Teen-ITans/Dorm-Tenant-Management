@@ -25,13 +25,27 @@ $db = get_db();
 $systemUserId = 1; // the default admin seeded in schema.sql — used as the "sender" of automated alerts
 $sentCount = 0;
 
+<<<<<<< HEAD
+=======
+// ---- 0) Roll contract statuses forward --------------------------------
+// Leases that ran past their end date become 'Expired', ones inside the
+// 30-day window become 'Expiring Soon'. The app does this on page load
+// too, but running it here means it happens even on a quiet day when
+// nobody signs in.
+refresh_contract_statuses($db);
+
+>>>>>>> origin/james
 // ---- 1) Contracts expiring within the next 7 days ---------------------
 $stmt = $db->query("
     SELECT c.contract_id, c.contract_end, u.first_name, u.email, t.tenant_id
     FROM contracts c
     JOIN tenants t ON t.tenant_id = c.tenant_id
     JOIN users u ON u.user_id = t.user_id
+<<<<<<< HEAD
     WHERE c.contract_status = 'Active'
+=======
+    WHERE c.contract_status IN ('Active','Expiring Soon')
+>>>>>>> origin/james
       AND c.contract_end BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)
 ");
 foreach ($stmt->fetchAll() as $row) {
@@ -48,6 +62,35 @@ foreach ($stmt->fetchAll() as $row) {
     $sentCount++;
 }
 
+<<<<<<< HEAD
+=======
+// ---- 1b) Contracts that expired yesterday -----------------------------
+// One clear "it's up, here's what happens next" alert on the day after
+// the term ends. Bounded to a single day so this can't re-send every
+// morning for a lease nobody has gotten around to closing out.
+$expiredStmt = $db->query("
+    SELECT c.contract_id, c.contract_end, u.first_name, u.email, t.tenant_id
+    FROM contracts c
+    JOIN tenants t ON t.tenant_id = c.tenant_id
+    JOIN users u ON u.user_id = t.user_id
+    WHERE c.contract_status = 'Expired'
+      AND c.contract_end = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+");
+foreach ($expiredStmt->fetchAll() as $row) {
+    $subject = 'Your dorm contract has expired';
+    $message = "Hi {$row['first_name']}, your contract ended on "
+             . date('F j, Y', strtotime($row['contract_end']))
+             . '. You can request a renewal from My Room & Contract in your portal, or visit the office to arrange moving out.';
+
+    $db->prepare("INSERT INTO notifications (sender_id, type, subject, message, target_type, target_value)
+                  VALUES (?, 'Contract Expiry Alert', ?, ?, 'tenant', ?)")
+       ->execute([$systemUserId, $subject, $message, $row['tenant_id']]);
+
+    send_email_alert($row['email'], $row['first_name'], $subject, email_template($subject, $message));
+    $sentCount++;
+}
+
+>>>>>>> origin/james
 // ---- 2) Payments that are now overdue ----------------------------------
 $stmt2 = $db->query("
     SELECT p.payment_id, p.due_date, u.first_name, u.email, t.tenant_id

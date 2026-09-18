@@ -60,9 +60,17 @@ and neither touches your existing data:
 | `key_returned` | Check-in/Check-out Monitor | `database/migration_add_key_returned.sql` |
 | `rejection_reason` | Tenant Registration/Approval (rejecting or reconsidering an applicant) | `database/migration_add_rejection_reason.sql` |
 | `reset_otp`, `reset_otp_expires` | Forgot Password | `database/migration_add_reset_otp.sql` |
+<<<<<<< HEAD
 
 Setting up fresh right now? Skip both — `schema.sql` already includes
 everything.
+=======
+| `paymongo_checkout_id`, `paymongo_payment_id`, `webhook_received_at` | Paying rent with GCash | `database/migration_add_paymongo_columns.sql` |
+| `renewal_requested_at`, `last_renewed_at`, `renewal_count`, `terminated_at`, `termination_reason` | Renew / Terminate Contract | `database/migration_add_contract_renewal.sql` |
+
+Setting up fresh right now? Skip them all — `schema.sql` already
+includes everything.
+>>>>>>> origin/james
 
 ### Want a clean slate instead of the demo tenant?
 
@@ -278,6 +286,69 @@ misconfigured server that can include connection details. It now
 logs the real error server-side (`error_log()`) and shows a generic
 message to whoever's looking at the page.
 
+<<<<<<< HEAD
+=======
+**Why a renewal reuses the contract row instead of creating a new
+one:** a lease that gets extended is still the same lease, and the
+tenant's "Payment History" screen is built around that — every payment
+hangs off one `contract_id`. Renewing writes a new `contract_end` onto
+the existing row and bumps `renewal_count`, so nothing gets orphaned
+behind a second contract. Terminating is the opposite case: it's a
+hard stop, so `contract_status` goes to `Terminated` and that row can
+never be renewed again — replacing it means creating a genuinely new
+contract.
+
+**Why contract statuses are recalculated on page load:** nothing used
+to move a lease along on its own, so a contract that ended months ago
+still displayed as "Active" everywhere. `refresh_contract_statuses()`
+(in `includes/functions.php`) does that bookkeeping — past its end date
+becomes `Expired`, inside 30 days becomes `Expiring Soon` — and it's
+idempotent with a per-request guard, so calling it at the top of any
+page that reads a contract status is free. `cron/check_expirations.php`
+runs it too, so it still happens on a day nobody signs in. `Terminated`
+is deliberately never touched by it: that's an admin decision, not
+something a date should be able to undo.
+
+**Why the tenant can request a renewal but not set the dates:** the
+tenant portal's "Request Renewal" button only stamps
+`renewal_requested_at`, which surfaces against their contract in
+Payment & Contract Management. Who gets to stay, for how long, and at
+what rent stays an admin decision — the tenant just gets a way to ask
+that doesn't involve walking to the office.
+
+**Why the rent status on the tenant home is derived, never stored:**
+there's no "is this month paid" flag to keep in sync — and therefore
+nothing that can drift out of sync. `tenant_rent_status()` reads the
+`payments` table for the current billing month and decides: a `Paid`
+row means green/Paid, `Pending` means amber, anything else (including
+a `Failed` attempt, or no row at all) means red/Due. A `Paid` row
+always outranks a stray `Pending` retry for the same month, so a
+duplicate attempt can't drag a settled month back to unpaid. That's
+what makes the status update on its own the moment a payment lands,
+from any direction — the GCash webhook, the status check below, or an
+admin recording a cash payment.
+
+**Why the pay forms use a month dropdown instead of a text box:** that
+derivation only works if "September 2026" is written the same way
+every time. A free-text field produced "Sept 2026" and "sept 2026",
+which no reliable matching can reconcile, so both pay forms now pick
+from `billing_month_options()`. The column and its stored format are
+unchanged — only the input is constrained.
+
+**Why payments are also confirmed by polling, not just the webhook:**
+`webhooks/paymongo.php` is still the primary path, but PayMongo can
+only call a publicly reachable URL, and a plain XAMPP localhost isn't
+one — payments would sit at `Pending` forever while testing.
+`sync_pending_gcash_payments()` closes that gap by asking PayMongo
+about open checkouts when the tenant loads a page. It's deliberately
+bounded: GCash rows only, still `Pending`, attempted within the last
+24 hours, at most 3 lookups per request, every failure swallowed and
+logged. Both paths use the same `payment_status != 'Paid'` guard, so
+whichever gets there first wins and the other is a no-op. Note that
+Checkout Sessions are *created* on PayMongo's `/v2` but *read back* on
+`/v1` — `/v2` has no GET route for them.
+
+>>>>>>> origin/james
 **What's intentionally simple, and how to level it up:**
 - *PDF reports:* `admin/report_print.php` renders a clean printable
   HTML table; "Export PDF" is just the browser's Print → Save as PDF.

@@ -86,6 +86,7 @@ $unassignedTenants = $db->query("
     ORDER BY u.first_name
 ")->fetchAll();
 
+<<<<<<< HEAD
 // Coming from the "Assign Room" shortcut on Tenant Approval? Pre-select
 // them in the modal once the admin picks a room, instead of making them
 // find the name again in the dropdown.
@@ -97,6 +98,8 @@ foreach ($unassignedTenants as $t) {
     }
 }
 
+=======
+>>>>>>> origin/james
 $pageTitle = 'Property Management';
 include __DIR__ . '/../includes/header.php';
 ?>
@@ -112,6 +115,7 @@ include __DIR__ . '/../includes/header.php';
   <div class="stat-card"><div class="stat-card-body"><div class="stat-label">Occupancy</div><div class="stat-value"><?= $occupancyRate ?>%</div></div><div class="stat-icon stat-icon-outline"><i class="bi bi-building"></i></div></div>
 </div>
 
+<<<<<<< HEAD
 <?php if ($preselectTenant): ?>
   <div class="callout callout-info mt-2">
     <i class="bi bi-info-circle-fill"></i>
@@ -119,6 +123,8 @@ include __DIR__ . '/../includes/header.php';
   </div>
 <?php endif; ?>
 
+=======
+>>>>>>> origin/james
 <div class="panel mt-2" id="rooms">
   <div class="panel-header"><h2>Room Grid</h2></div>
   <?php
@@ -204,7 +210,11 @@ include __DIR__ . '/../includes/header.php';
             <p class="text-muted">No approved tenants are waiting for a room right now. Approve applicants first in <a href="<?= BASE_URL ?>/admin/tenants.php">Tenant Management</a>.</p>
           <?php else: ?>
             <label class="form-label">Tenant</label>
+<<<<<<< HEAD
             <select class="form-select" name="tenant_id" id="assign_tenant_id" required>
+=======
+            <select class="form-select" name="tenant_id" required>
+>>>>>>> origin/james
               <option value="">Choose a tenant…</option>
               <?php foreach ($unassignedTenants as $t): ?>
                 <option value="<?= $t['tenant_id'] ?>"><?= clean($t['first_name'] . ' ' . $t['last_name']) ?></option>
@@ -239,11 +249,14 @@ document.getElementById('assignModal').addEventListener('show.bs.modal', functio
   const btn = e.relatedTarget;
   document.getElementById('assign_room_id').value = btn.dataset.roomId;
   document.getElementById('assign_room_number').textContent = btn.dataset.roomNumber;
+<<<<<<< HEAD
   const preselect = " . (int) ($preselectTenant['tenant_id'] ?? 0) . ";
   const tenantSelect = document.getElementById('assign_tenant_id');
   if (preselect && tenantSelect.querySelector('option[value=\"' + preselect + '\"]')) {
     tenantSelect.value = preselect;
   }
+=======
+>>>>>>> origin/james
 });
 </script>";
 include __DIR__ . '/../includes/footer.php';

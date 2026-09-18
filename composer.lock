@@ -4,6 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
+<<<<<<< HEAD
     "content-hash": "092b885c5ef9cc65c28c9031473aaf5f",
     "packages": [
         {
@@ -229,6 +230,11 @@
             "time": "2026-08-18T06:18:41+00:00"
         },
         {
+=======
+    "content-hash": "c7173d6a700b02b111e51b703acd8c8e",
+    "packages": [
+        {
+>>>>>>> origin/james
             "name": "phpmailer/phpmailer",
             "version": "v7.1.1",
             "source": {
@@ -309,6 +315,7 @@
                 }
             ],
             "time": "2026-05-18T08:06:14+00:00"
+<<<<<<< HEAD
         },
         {
             "name": "sabberworm/php-css-parser",
@@ -532,6 +539,8 @@
                 }
             ],
             "time": "2026-02-04T18:08:13+00:00"
+=======
+>>>>>>> origin/james
         }
     ],
     "packages-dev": [],
