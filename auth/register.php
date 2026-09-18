@@ -6,7 +6,8 @@ if (is_logged_in()) {
 }
 
 $errors = [];
-$old = ['first_name' => '', 'last_name' => '', 'email' => '', 'phone' => '', 'age' => ''];
+$old = ['first_name' => '', 'last_name' => '', 'email' => '', 'phone' => '', 'age' => '',
+        'emergency_contact' => '', 'emergency_phone' => ''];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
@@ -18,8 +19,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $old['age']        = str_input($_POST, 'age');
     $password          = str_input($_POST, 'password', '', false);
     $confirm           = $_POST['confirm_password'] ?? '';
-    $emergency_contact = str_input($_POST, 'emergency_contact');
-    $emergency_phone   = str_input($_POST, 'emergency_phone');
+    $old['emergency_contact'] = str_input($_POST, 'emergency_contact');
+    $old['emergency_phone']   = str_input($_POST, 'emergency_phone');
+    $emergency_contact = $old['emergency_contact'];
 
     if ($old['first_name'] === '' || $old['last_name'] === '') {
         $errors[] = 'First and last name are required.';
@@ -33,6 +35,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($password !== $confirm) {
         $errors[] = 'Passwords do not match.';
     }
+    // Contact numbers are stored one way only: "+63 9123456789".
+    if ($err = ph_mobile_error($old['phone'], 'Contact number')) {
+        $errors[] = $err;
+    }
+    if ($err = ph_mobile_error($old['emergency_phone'], 'Emergency contact number')) {
+        $errors[] = $err;
+    }
+
+    $old['phone']           = ph_mobile_form_value($old['phone']);
+    $old['emergency_phone'] = ph_mobile_form_value($old['emergency_phone']);
 
     if (empty($errors)) {
         $db = get_db();
@@ -55,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $old['email'],
                     $hash,
                     $old['age'] !== '' ? (int) $old['age'] : null,
-                    $old['phone'] ?: null,
+                    ph_mobile_store($old['phone']),
                 ]);
                 $userId = (int) $db->lastInsertId();
 
@@ -63,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'INSERT INTO tenants (user_id, status, approval_status, emergency_contact, emergency_phone)
                      VALUES (?, "Pending", "Pending", ?, ?)'
                 );
-                $stmt2->execute([$userId, $emergency_contact ?: null, $emergency_phone ?: null]);
+                $stmt2->execute([$userId, $emergency_contact ?: null, ph_mobile_store($old['emergency_phone'])]);
 
                 $db->commit();
                 flash('success', 'Account created! An admin needs to review and approve your application before your dashboard unlocks.');
@@ -116,8 +128,10 @@ include __DIR__ . '/../includes/header.php';
         </div>
         <div class="row g-3">
           <div class="col-md-6">
-            <label class="form-label">Phone Number</label>
-            <input type="text" name="phone" class="form-control" placeholder="+63 9XX XXX XXXX" value="<?= clean($old['phone']) ?>">
+            <label class="form-label">Contact Number</label>
+            <input type="text" name="phone" class="form-control" data-ph-mobile inputmode="tel"
+                   placeholder="+63 9123456789" value="<?= clean($old['phone'] !== '' ? $old['phone'] : '+63') ?>">
+            <div class="form-text">10-digit mobile number, starting with 9.</div>
           </div>
           <div class="col-md-6">
             <label class="form-label">Age <span class="text-muted">(optional)</span></label>
@@ -139,11 +153,12 @@ include __DIR__ . '/../includes/header.php';
         <div class="row g-3">
           <div class="col-md-6">
             <label class="form-label">Contact Name</label>
-            <input type="text" name="emergency_contact" class="form-control">
+            <input type="text" name="emergency_contact" class="form-control" value="<?= clean($old['emergency_contact']) ?>">
           </div>
           <div class="col-md-6">
-            <label class="form-label">Contact Phone</label>
-            <input type="text" name="emergency_phone" class="form-control">
+            <label class="form-label">Contact Number</label>
+            <input type="text" name="emergency_phone" class="form-control" data-ph-mobile inputmode="tel"
+                   placeholder="+63 9123456789" value="<?= clean($old['emergency_phone'] !== '' ? $old['emergency_phone'] : '+63') ?>">
           </div>
         </div>
         <button type="submit" class="btn btn-maroon w-100 mt-4">Create Account</button>

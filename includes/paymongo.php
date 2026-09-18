@@ -64,6 +64,11 @@ function paymongo_request(string $method, string $path, ?array $body = null): ar
  * which is what PayMongo's API expects.
  * $metadata should include something that lets the webhook find the
  * right row again, e.g. ['payment_id' => 42].
+ * $billing is the person actually paying (['name', 'email', 'phone']).
+ * Send it: it pre-fills the checkout page and is what identifies the
+ * payer in the PayMongo dashboard. Leave it out and the field starts
+ * blank, so whoever's browser is being used autofills someone else's
+ * details and every tenant's payment looks like it came from them.
  *
  * Returns ['id' => 'cs_xxx', 'checkout_url' => 'https://...'].
  */
@@ -73,7 +78,8 @@ function paymongo_create_gcash_checkout(
     string $referenceNumber,
     array $metadata,
     string $successUrl,
-    string $cancelUrl
+    string $cancelUrl,
+    array $billing = []
 ): array {
     $centavos = (int) round($amount * 100);
 
@@ -95,6 +101,13 @@ function paymongo_create_gcash_checkout(
             ],
         ],
     ];
+
+    // Blanks are dropped rather than sent as null — PayMongo rejects an
+    // empty string where it expects a phone number or address.
+    $billing = array_filter($billing, static fn ($value) => $value !== null && $value !== '');
+    if ($billing) {
+        $payload['data']['attributes']['billing'] = $billing;
+    }
 
     $response = paymongo_request('POST', '/checkout_sessions', $payload);
 
@@ -141,6 +154,20 @@ function paymongo_verify_webhook_signature(string $rawPayload, string $signature
 }
 
 /**
+ * Build a v1 URL for a Checkout Session route.
+ *
+ * Sessions are CREATED on v2 but read back and expired on v1 — v2 has
+ * no route for either and answers "The requested route does not exist".
+ * The version segment is swapped rather than hardcoding a second base
+ * URL, so PAYMONGO_API_BASE stays the single place a host change has to
+ * be made.
+ */
+function paymongo_v1_url(string $path): string
+{
+    return preg_replace('#/v\d+$#', '/v1', PAYMONGO_API_BASE) . $path;
+}
+
+/**
  * Look one Checkout Session up again by id.
  *
  * The webhook is still the source of truth for confirming payments,
@@ -151,23 +178,53 @@ function paymongo_verify_webhook_signature(string $rawPayload, string $signature
  */
 function paymongo_get_checkout_session(string $checkoutId): array
 {
-    // Checkout Sessions are CREATED on v2 but READ BACK on v1 — v2 has
-    // no GET route for them and answers "The requested route does not
-    // exist". The version segment is swapped rather than hardcoding a
-    // second base URL, so PAYMONGO_API_BASE stays the single place a
-    // host change has to be made.
-    $readBase = preg_replace('#/v\d+$#', '/v1', PAYMONGO_API_BASE);
+    return paymongo_request('GET', paymongo_v1_url('/checkout_sessions/' . rawurlencode($checkoutId)));
+}
 
-    return paymongo_request('GET', $readBase . '/checkout_sessions/' . rawurlencode($checkoutId));
+/**
+ * Expire a Checkout Session so nobody can pay it any more.
+ *
+ * Run this before discarding an abandoned payment row: a checkout link
+ * the tenant left open in another tab could otherwise still be paid
+ * after the portal had stopped tracking it, and that money would never
+ * show up against their rent. Returns false if PayMongo refused (an
+ * already-paid session can't be expired) — the caller must then keep
+ * the row rather than risk losing a real payment.
+ */
+function paymongo_expire_checkout_session(string $checkoutId): bool
+{
+    try {
+        paymongo_request('POST', paymongo_v1_url('/checkout_sessions/' . rawurlencode($checkoutId) . '/expire'));
+        return true;
+    } catch (Throwable $e) {
+        // A session that's already expired refuses a second expiry —
+        // but that's the state we were asking for, so check before
+        // reporting failure and stranding the row.
+        try {
+            $session = paymongo_get_checkout_session($checkoutId);
+            if (($session['data']['attributes']['status'] ?? null) === 'expired') {
+                return true;
+            }
+        } catch (Throwable $ignored) {
+        }
+
+        error_log('GCash: could not expire checkout ' . $checkoutId . ': ' . $e->getMessage());
+        return false;
+    }
 }
 
 /**
  * Boil a Checkout Session response down to what this app cares about.
  *
- * Returns ['status' => 'paid'|'failed'|'unpaid', 'payment_id' => ?string].
- * Anything still in flight (or that PayMongo describes in a way we
- * don't recognise) comes back as 'unpaid' — the safe answer, since it
- * just leaves the payment Pending for the webhook to settle later.
+ * Returns ['status' => ..., 'payment_id' => ?string], where status is:
+ *   paid      — money arrived, settle the row
+ *   failed    — a real attempt was made and declined
+ *   abandoned — the tenant never even picked a payment method, so
+ *               nothing happened and nothing is outstanding; the row
+ *               can be thrown away rather than shown as a debt
+ *   unpaid    — an attempt is in flight, or PayMongo described this in
+ *               a way we don't recognise. The safe answer: leave the
+ *               payment Pending and look again later.
  */
 function paymongo_checkout_payment_status(array $session): array
 {
@@ -181,21 +238,46 @@ function paymongo_checkout_payment_status(array $session): array
         $attributes['payments'] ?? []
     );
 
+    $declined = false;
+    $inFlight = false;
+
     foreach ($payments as $payment) {
         $status = $payment['attributes']['status'] ?? null;
         if ($status === 'paid') {
             return ['status' => 'paid', 'payment_id' => $payment['id'] ?? null];
         }
+        if ($status === 'failed') {
+            $declined = true;
+        } else {
+            $inFlight = true;
+        }
     }
 
-    // No paid payment on the session. `payment_intent.status` tells us
-    // whether it's still waiting on the customer or genuinely dead.
-    $intentStatus = $attributes['payment_intent']['attributes']['status'] ?? null;
-    if (in_array($intentStatus, ['succeeded'], true)) {
+    // No paid payment listed. The session's own status and its
+    // payment_intent together say whether anything is still outstanding.
+    $intentStatus  = $attributes['payment_intent']['attributes']['status'] ?? null;
+    $sessionStatus = $attributes['status'] ?? null;
+
+    if ($intentStatus === 'succeeded' || $sessionStatus === 'paid') {
         return ['status' => 'paid', 'payment_id' => $attributes['payment_intent']['id'] ?? null];
     }
-    if (in_array($intentStatus, ['cancelled', 'canceled'], true)) {
+    if ($inFlight) {
+        return ['status' => 'unpaid', 'payment_id' => null];
+    }
+    if ($declined || in_array($intentStatus, ['cancelled', 'canceled'], true)) {
         return ['status' => 'failed', 'payment_id' => null];
+    }
+
+    // Nothing was ever attempted here. PayMongo only attaches a
+    // payment_intent once the customer picks a method, so a null one on
+    // a live session means they opened the link and walked away; an
+    // expired session can't be paid any more either way. A declined
+    // attempt also leaves the intent at awaiting_payment_method, which
+    // is why the $declined check above has to run first.
+    if ($sessionStatus === 'expired'
+        || $intentStatus === 'awaiting_payment_method'
+        || ($sessionStatus === 'active' && ($attributes['payment_intent'] ?? null) === null)) {
+        return ['status' => 'abandoned', 'payment_id' => null];
     }
 
     return ['status' => 'unpaid', 'payment_id' => null];

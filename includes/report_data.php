@@ -66,7 +66,15 @@ function render_report_table(array $columns, array $rows): string
             <?php foreach ($rows as $row): ?>
                 <tr>
                     <?php foreach ($columns as $field): ?>
-                        <td><?= htmlspecialchars((string) ($row[$field] ?? '—')) ?></td>
+                        <?php
+                        $cell = (string) ($row[$field] ?? '');
+                        // Contact numbers print in the same "+63 9123456789"
+                        // form the rest of the system shows.
+                        if ($field === 'phone' && $cell !== '') {
+                            $cell = ph_mobile_display($cell);
+                        }
+                        ?>
+                        <td><?= htmlspecialchars($cell !== '' ? $cell : '—') ?></td>
                     <?php endforeach; ?>
                 </tr>
             <?php endforeach; ?>

@@ -16,24 +16,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $emergencyPhone   = str_input($_POST, 'emergency_phone');
     $newPassword = str_input($_POST, 'new_password', '', false);
 
+    $phoneError = ph_mobile_error($phone, 'Contact number')
+                  ?? ph_mobile_error($emergencyPhone, 'Emergency contact number');
+
     if ($first === '' || $last === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         flash('error', 'Please fill in a valid name and email.');
     } elseif ($newPassword !== '' && strlen($newPassword) < 8) {
         flash('error', 'New password needs at least 8 characters.');
+    } elseif ($phoneError !== null) {
+        flash('error', $phoneError);
     } else {
         $db->beginTransaction();
         try {
             if ($newPassword !== '') {
                 $db->prepare('UPDATE users SET first_name=?, last_name=?, email=?, phone=?, password_hash=? WHERE user_id=?')
-                   ->execute([$first, $last, $email, $phone ?: null, password_hash($newPassword, PASSWORD_DEFAULT), current_user_id()]);
+                   ->execute([$first, $last, $email, ph_mobile_store($phone), password_hash($newPassword, PASSWORD_DEFAULT), current_user_id()]);
             } else {
                 $db->prepare('UPDATE users SET first_name=?, last_name=?, email=?, phone=? WHERE user_id=?')
-                   ->execute([$first, $last, $email, $phone ?: null, current_user_id()]);
+                   ->execute([$first, $last, $email, ph_mobile_store($phone), current_user_id()]);
             }
             // Emergency contact "relationship" isn't its own column — folded into the name field, matching the prototype's display.
             $contactValue = $emergencyContact . ($emergencyRelation ? " ($emergencyRelation)" : '');
             $db->prepare('UPDATE tenants SET emergency_contact=?, emergency_phone=? WHERE user_id=?')
-               ->execute([$contactValue ?: null, $emergencyPhone ?: null, current_user_id()]);
+               ->execute([$contactValue ?: null, ph_mobile_store($emergencyPhone), current_user_id()]);
 
             $db->commit();
             $_SESSION['first_name'] = $first;
@@ -83,14 +88,14 @@ include __DIR__ . '/../includes/header.php';
       <div class="mb-3"><label class="form-label">First Name</label><input class="form-control" name="first_name" value="<?= clean($profile['first_name']) ?>" required></div>
       <div class="mb-3"><label class="form-label">Last Name</label><input class="form-control" name="last_name" value="<?= clean($profile['last_name']) ?>" required></div>
       <div class="mb-3"><label class="form-label">Email Address</label><input type="email" class="form-control" name="email" value="<?= clean($profile['email']) ?>" required></div>
-      <div class="mb-3"><label class="form-label">Phone Number</label><input class="form-control" name="phone" value="<?= clean($profile['phone'] ?? '') ?>"></div>
+      <div class="mb-3"><label class="form-label">Contact Number</label><input class="form-control" name="phone" data-ph-mobile inputmode="tel" placeholder="+63 9123456789" value="<?= clean(ph_mobile_form_value($profile['phone'] ?? '')) ?>"></div>
       <div class="mb-0"><label class="form-label">Tenant ID</label><input class="form-control" value="TEN-<?= str_pad((string) $profile['tenant_id'], 4, '0', STR_PAD_LEFT) ?>" disabled></div>
     </div>
     <div class="panel">
       <p class="fw-semibold small mb-3">Emergency Contact</p>
       <div class="mb-3"><label class="form-label">Contact Name</label><input class="form-control" name="emergency_contact" value="<?= clean($contactName) ?>"></div>
       <div class="mb-3"><label class="form-label">Relationship</label><input class="form-control" name="emergency_relation" value="<?= clean($relation) ?>"></div>
-      <div class="mb-0"><label class="form-label">Phone Number</label><input class="form-control" name="emergency_phone" value="<?= clean($profile['emergency_phone'] ?? '') ?>"></div>
+      <div class="mb-0"><label class="form-label">Contact Number</label><input class="form-control" name="emergency_phone" data-ph-mobile inputmode="tel" placeholder="+63 9123456789" value="<?= clean(ph_mobile_form_value($profile['emergency_phone'] ?? '')) ?>"></div>
     </div>
   </div>
 

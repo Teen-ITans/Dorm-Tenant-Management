@@ -23,11 +23,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $last  = str_input($_POST, 'last_name');
         $phone = str_input($_POST, 'phone');
 
+        $phoneError = ph_mobile_error($phone, 'Contact number');
+
         if ($first === '' || $last === '') {
             flash('error', 'Name cannot be blank.');
+        } elseif ($phoneError !== null) {
+            flash('error', $phoneError);
         } else {
             $db->prepare('UPDATE users SET first_name=?, last_name=?, phone=? WHERE user_id=?')
-               ->execute([$first, $last, $phone ?: null, $t['user_id']]);
+               ->execute([$first, $last, ph_mobile_store($phone), $t['user_id']]);
             flash('success', 'Tenant contact info updated.');
         }
     }
@@ -91,13 +95,13 @@ include __DIR__ . '/../includes/header.php';
                 <div><?= clean($t['first_name'] . ' ' . $t['last_name']) ?><div class="sub">Since <?= clean(date('n/j/Y', strtotime($t['date_registered']))) ?></div></div>
               </div>
             </td>
-            <td class="text-muted small"><?= clean($t['email']) ?><?= $t['phone'] ? '<br>' . clean($t['phone']) : '' ?></td>
+            <td class="text-muted small"><?= clean($t['email']) ?><?= $t['phone'] ? '<br>' . clean(ph_mobile_display($t['phone'])) : '' ?></td>
             <td><?= $t['room_number'] ? 'Room ' . clean($t['room_number']) : '<span class="text-muted">Unassigned</span>' ?></td>
             <td><span class="badge badge-<?= $t['is_active'] ? status_badge_class($t['status']) : 'secondary' ?>"><?= $t['is_active'] ? clean($t['status']) : 'Deactivated' ?></span></td>
             <td class="text-end">
               <button type="button" class="btn btn-icon" title="Edit" data-bs-toggle="modal" data-bs-target="#editTenantModal"
                 data-id="<?= $t['tenant_id'] ?>" data-first="<?= clean($t['first_name']) ?>" data-last="<?= clean($t['last_name']) ?>"
-                data-phone="<?= clean($t['phone'] ?? '') ?>" data-room="<?= $t['room_number'] ? 'Room ' . clean($t['room_number']) : 'Unassigned' ?>"
+                data-phone="<?= clean(ph_mobile_form_value($t['phone'] ?? '')) ?>" data-room="<?= $t['room_number'] ? 'Room ' . clean($t['room_number']) : 'Unassigned' ?>"
                 data-status="<?= clean($t['status']) ?>"><i class="bi bi-pencil-square"></i></button>
               <?php if ($t['is_active']): ?>
               <form method="post" class="d-inline" onsubmit="return confirm('Deactivate this tenant\'s account? They will no longer be able to log in. This does not delete their payment or contract history.');">
@@ -128,7 +132,7 @@ include __DIR__ . '/../includes/header.php';
         <div class="modal-body">
           <div class="mb-3"><label class="form-label">First Name</label><input class="form-control" name="first_name" id="et_first_name" required></div>
           <div class="mb-3"><label class="form-label">Last Name</label><input class="form-control" name="last_name" id="et_last_name" required></div>
-          <div class="mb-3"><label class="form-label">Phone</label><input class="form-control" name="phone" id="et_phone"></div>
+          <div class="mb-3"><label class="form-label">Contact Number</label><input class="form-control" name="phone" id="et_phone" data-ph-mobile inputmode="tel" placeholder="+63 9123456789" value="+63"></div>
           <div class="mb-3"><label class="form-label">Room</label><input class="form-control" id="et_room" disabled></div>
           <div class="mb-1"><label class="form-label">Status</label><input class="form-control" id="et_status" disabled></div>
           <p class="text-muted small mt-2 mb-0">Room assignment and status changes happen in <a href="<?= BASE_URL ?>/admin/rooms.php">Property Management</a> and <a href="<?= BASE_URL ?>/admin/tenant-status.php">Track Status</a>, to keep room availability in sync.</p>

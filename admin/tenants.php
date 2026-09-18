@@ -46,7 +46,7 @@ include __DIR__ . '/../includes/header.php';
               <div><?= clean($p['first_name'] . ' ' . $p['last_name']) ?></div>
             </div>
           </td>
-          <td class="text-muted small"><i class="bi bi-envelope-fill"></i> <?= clean($p['email']) ?><?= $p['phone'] ? '<br><i class="bi bi-telephone-fill"></i> ' . clean($p['phone']) : '' ?></td>
+          <td class="text-muted small"><i class="bi bi-envelope-fill"></i> <?= clean($p['email']) ?><?= $p['phone'] ? '<br><i class="bi bi-telephone-fill"></i> ' . clean(ph_mobile_display($p['phone'])) : '' ?></td>
           <td class="text-muted small"><i class="bi bi-calendar-event"></i> <?= clean(date('n/j/Y', strtotime($p['date_registered']))) ?></td>
           <td class="text-end">
             <form method="post" class="d-inline"><?= csrf_field() ?><input type="hidden" name="action" value="approve"><input type="hidden" name="tenant_id" value="<?= $p['tenant_id'] ?>"><button class="btn btn-sm btn-maroon">Approve</button></form>

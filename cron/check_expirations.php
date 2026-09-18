@@ -82,12 +82,17 @@ foreach ($expiredStmt->fetchAll() as $row) {
 }
 
 // ---- 2) Payments that are now overdue ----------------------------------
+// GCash rows are skipped: a Pending one is an open (or abandoned)
+// checkout link, not money the tenant owes and withheld. PayMongo
+// settles those, or settle_pending_gcash_payment() clears them away —
+// chasing them here would bill people for a button they clicked once.
 $stmt2 = $db->query("
     SELECT p.payment_id, p.due_date, u.first_name, u.email, t.tenant_id
     FROM payments p
     JOIN tenants t ON t.tenant_id = p.tenant_id
     JOIN users u ON u.user_id = t.user_id
     WHERE p.payment_status = 'Pending' AND p.due_date < CURDATE()
+      AND p.paymongo_checkout_id IS NULL
 ");
 foreach ($stmt2->fetchAll() as $row) {
     $db->prepare("UPDATE payments SET payment_status = 'Overdue', reminder_sent = TRUE WHERE payment_id = ?")

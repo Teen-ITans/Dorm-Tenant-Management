@@ -39,12 +39,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('/tenant/payments.php');
     }
 
-    $already = $db->prepare("SELECT payment_id FROM payments
+    // A month already settled can't be paid twice. A month still
+    // showing Pending usually just means an earlier checkout the tenant
+    // backed out of, so ask PayMongo what became of it rather than
+    // assuming: only a genuine payment stops them paying now.
+    $already = $db->prepare("SELECT * FROM payments
                              WHERE tenant_id = ? AND LOWER(TRIM(COALESCE(payment_for_month,''))) = LOWER(?)
-                               AND payment_status IN ('Paid','Pending') LIMIT 1");
+                               AND payment_status IN ('Paid','Pending')
+                             ORDER BY FIELD(payment_status,'Paid','Pending'), payment_id DESC LIMIT 1");
     $already->execute([$tenant['tenant_id'], $month]);
-    if ($already->fetch()) {
-        flash('error', $month . ' is already paid or has a payment being confirmed — check your payment history below.');
+    $already = $already->fetch() ?: null;
+
+    if ($already && $already['payment_status'] === 'Pending') {
+        // Clicking Pay is the tenant saying they're done with whatever
+        // checkout came before, so an abandoned one goes now.
+        $already = settle_pending_gcash_payment($db, $already);
+    }
+
+    if ($already) {
+        flash('error', $already['payment_status'] === 'Paid'
+            ? $month . ' is already paid — check your payment history below.'
+            : 'Your GCash payment for ' . $month . ' is still going through. Give it a moment, then refresh this page.');
         redirect('/tenant/payments.php');
     }
 
@@ -67,6 +82,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('/tenant/payments.php');
     }
 
+    // Who PayMongo should record as the payer. Without this the
+    // checkout page opens with an empty name field, the browser
+    // autofills whoever used it last, and every tenant's rent shows up
+    // in the dashboard under that person's name.
+    $payer = $db->prepare('SELECT first_name, last_name, email, phone FROM users WHERE user_id = ?');
+    $payer->execute([$tenant['user_id']]);
+    $payer = $payer->fetch() ?: [];
+
     try {
         $checkout = paymongo_create_gcash_checkout(
             $amount,
@@ -74,7 +97,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'PAY-' . $paymentId,
             ['payment_id' => $paymentId, 'tenant_id' => $tenant['tenant_id']],
             APP_URL . '/tenant/payments.php?gcash=success',
-            APP_URL . '/tenant/payments.php?gcash=cancelled'
+            // The id rides along so backing out of the checkout can
+            // clear this exact row instead of guessing at one.
+            APP_URL . '/tenant/payments.php?gcash=cancelled&p=' . $paymentId,
+            [
+                'name'  => trim(($payer['first_name'] ?? '') . ' ' . ($payer['last_name'] ?? '')),
+                'email' => $payer['email'] ?? '',
+                // PayMongo wants E.164, so the display space comes out.
+                'phone' => ph_mobile_e164($payer['phone'] ?? ''),
+            ]
         );
 
         if (empty($checkout['checkout_url']) || empty($checkout['id'])) {
@@ -105,7 +136,22 @@ if (isset($_GET['gcash']) && $_GET['gcash'] === 'success') {
         ? 'Payment confirmed — your rent is now marked as Paid. Thank you!'
         : 'Thanks! We\'re confirming your GCash payment now — it will show as Paid here and on your home page automatically, usually within a minute.');
 } elseif (isset($_GET['gcash']) && $_GET['gcash'] === 'cancelled') {
-    flash('error', 'Payment cancelled. No amount was charged.');
+    // Backing out of the checkout should leave no trace — otherwise the
+    // portal keeps showing rent as "being confirmed" for a payment that
+    // never happened. Scoped to this tenant's own Pending rows, so a
+    // tampered id can't touch anyone else's payment.
+    $cancelled = null;
+    $stmt = $db->prepare("SELECT * FROM payments WHERE payment_id = ? AND tenant_id = ? AND payment_status = 'Pending'");
+    $stmt->execute([(int) ($_GET['p'] ?? 0), $tenant['tenant_id']]);
+    if ($row = $stmt->fetch()) {
+        $cancelled = settle_pending_gcash_payment($db, $row);
+    }
+
+    if ($cancelled && $cancelled['payment_status'] === 'Paid') {
+        flash('success', 'Good news — that payment did go through after all. Your rent is marked as Paid.');
+    } else {
+        flash('error', 'Payment cancelled. No amount was charged.');
+    }
 }
 
 $rent = tenant_rent_status($db, (int) $tenant['tenant_id'], $contract);
