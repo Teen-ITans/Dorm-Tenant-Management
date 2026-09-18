@@ -4,14 +4,11 @@ require_role('admin');
 
 $db = get_db();
 
-<<<<<<< HEAD
-=======
 // Move leases whose end date has come and gone into 'Expired' (and
 // leases inside the 30-day window into 'Expiring Soon') before anything
 // on this page reads a contract_status.
 refresh_contract_statuses($db);
 
->>>>>>> origin/james
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
     $action = $_POST['action'] ?? '';
@@ -70,8 +67,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-<<<<<<< HEAD
-=======
     // ---- Renew / continue an existing lease ---------------------------
     // The contract row is REUSED rather than replaced: same contract_id,
     // new end date. That keeps every payment already recorded against
@@ -202,7 +197,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
->>>>>>> origin/james
     if ($action === 'verify_payment') {
         $paymentId = (int) ($_POST['payment_id'] ?? 0);
         $newStatus = $_POST['new_status'] ?? 'Paid';
@@ -243,13 +237,6 @@ $contracts = $db->query("
     JOIN tenants t ON t.tenant_id = c.tenant_id
     JOIN users u ON u.user_id = t.user_id
     JOIN dorm_rooms r ON r.room_id = c.room_id
-<<<<<<< HEAD
-    ORDER BY c.contract_end ASC
-    LIMIT 30
-")->fetchAll();
-
-// Tenants with an active room but no *active* contract yet
-=======
     ORDER BY FIELD(c.contract_status,'Expired','Expiring Soon','Active','Terminated'), c.contract_end ASC
     LIMIT 30
 ")->fetchAll();
@@ -268,20 +255,12 @@ $contractCounts = $db->query("
 // Tenants with an assigned room but no live contract yet. 'Expiring
 // Soon' counts as live — it's the same lease as 'Active', just inside
 // the warning window — so it can be renewed rather than duplicated.
->>>>>>> origin/james
 $contractableTenants = $db->query("
     SELECT t.tenant_id, u.first_name, u.last_name, r.room_number, r.monthly_rate
     FROM tenants t
     JOIN users u ON u.user_id = t.user_id
     JOIN dorm_rooms r ON r.room_id = t.room_id
     WHERE t.room_id IS NOT NULL
-<<<<<<< HEAD
-      AND t.tenant_id NOT IN (SELECT tenant_id FROM contracts WHERE contract_status = 'Active')
-    ORDER BY u.first_name
-")->fetchAll();
-
-$activeContracts = array_filter($contracts, fn($c) => $c['contract_status'] !== 'Terminated' && $c['contract_status'] !== 'Expired');
-=======
       AND t.tenant_id NOT IN (SELECT tenant_id FROM contracts WHERE contract_status IN ('Active','Expiring Soon'))
     ORDER BY u.first_name
 ")->fetchAll();
@@ -290,7 +269,6 @@ $activeContracts = array_filter($contracts, fn($c) => $c['contract_status'] !== 
 // often lands after the term is up. Only a terminated one is closed
 // to new payments.
 $activeContracts = array_filter($contracts, fn($c) => $c['contract_status'] !== 'Terminated');
->>>>>>> origin/james
 
 $pageTitle = 'Payment & Contract Management';
 include __DIR__ . '/../includes/header.php';
@@ -314,30 +292,21 @@ include __DIR__ . '/../includes/header.php';
       <div class="panel-header"><h2>Payment Status</h2></div>
       <div class="table-responsive">
         <table class="table app-table align-middle">
-<<<<<<< HEAD
           <thead><tr><th>Tenant</th><th>Month</th><th>Amount</th><th>Method</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
           <tbody>
           <?php if (!$payments): ?><tr><td colspan="6" class="text-center text-muted py-4">No payments recorded yet.</td></tr><?php endif; ?>
-=======
-          <thead><tr><th>Tenant</th><th>Month</th><th>Amount</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
-          <tbody>
-          <?php if (!$payments): ?><tr><td colspan="5" class="text-center text-muted py-4">No payments recorded yet.</td></tr><?php endif; ?>
->>>>>>> origin/james
           <?php foreach ($payments as $p): ?>
             <tr>
               <td><?= clean($p['first_name'] . ' ' . $p['last_name']) ?><div class="text-muted small"><?= $p['room_number'] ? 'Room ' . clean($p['room_number']) : '' ?></div></td>
               <td class="small"><?= clean($p['payment_for_month'] ?: '—') ?></td>
               <td><?= peso($p['payment_amount']) ?></td>
-<<<<<<< HEAD
               <td class="small">
-                <?php if (str_starts_with((string) $p['payment_method'], 'PayMongo')): ?>
-                  <span class="badge badge-info"><i class="bi bi-credit-card-fill"></i> <?= clean($p['payment_method']) ?></span>
+                <?php if ($p['payment_method'] === 'GCash' && $p['paymongo_checkout_id']): ?>
+                  <span class="badge badge-info"><i class="bi bi-phone"></i> GCash</span>
                 <?php else: ?>
                   <?= clean($p['payment_method'] ?: '—') ?>
                 <?php endif; ?>
               </td>
-=======
->>>>>>> origin/james
               <td><span class="badge badge-<?= status_badge_class($p['payment_status']) ?>"><?= clean($p['payment_status']) ?></span></td>
               <td class="text-end">
                 <?php if ($p['payment_status'] !== 'Paid'): ?>
@@ -358,24 +327,6 @@ include __DIR__ . '/../includes/header.php';
   <div class="col-lg-5">
     <div class="panel" id="contracts">
       <div class="panel-header"><h2>Contracts</h2><button type="button" class="btn btn-sm btn-maroon" data-bs-toggle="modal" data-bs-target="#contractModal"><i class="bi bi-upload"></i> Upload</button></div>
-<<<<<<< HEAD
-      <div class="contract-list">
-        <?php if (!$contracts): ?><p class="text-muted py-3">No contracts yet.</p><?php endif; ?>
-        <?php foreach ($contracts as $c):
-          $daysLeft = days_until($c['contract_end']);
-          $isExpiring = $c['contract_status'] === 'Active' && $daysLeft <= 30;
-        ?>
-          <div class="contract-item">
-            <div>
-              <strong><?= clean($c['first_name'] . ' ' . $c['last_name']) ?></strong>
-              <div class="text-muted small">Room <?= clean($c['room_number']) ?> · <?= clean(date('M j, Y', strtotime($c['contract_start']))) ?> – <?= clean(date('M j, Y', strtotime($c['contract_end']))) ?></div>
-              <?php if ($isExpiring): ?><div class="text-danger small"><i class="bi bi-exclamation-triangle-fill"></i> Expires in <?= $daysLeft ?> day<?= $daysLeft === 1 ? '' : 's' ?></div><?php endif; ?>
-            </div>
-            <div class="text-end">
-              <span class="badge badge-<?= status_badge_class($isExpiring ? 'Expiring Soon' : $c['contract_status']) ?>"><?= $isExpiring ? 'Expiring Soon' : clean($c['contract_status']) ?></span>
-              <?php if ($c['contract_file']): ?><div><a href="<?= BASE_URL . '/' . clean($c['contract_file']) ?>" target="_blank" class="small"><i class="bi bi-file-earmark-text"></i> File</a></div><?php endif; ?>
-            </div>
-=======
       <?php if ((int) ($contractCounts['expired'] ?? 0) || (int) ($contractCounts['expiring'] ?? 0) || (int) ($contractCounts['requested'] ?? 0)): ?>
         <div class="contract-summary">
           <?php if ((int) $contractCounts['expired']): ?><span class="badge badge-danger"><?= (int) $contractCounts['expired'] ?> expired</span><?php endif; ?>
@@ -438,7 +389,6 @@ include __DIR__ . '/../includes/header.php';
                   data-room="<?= clean($c['room_number']) ?>"><i class="bi bi-x-octagon"></i> Terminate Contract</button>
               </div>
             <?php endif; ?>
->>>>>>> origin/james
           </div>
         <?php endforeach; ?>
       </div>
@@ -490,8 +440,6 @@ include __DIR__ . '/../includes/header.php';
   </div>
 </div>
 
-<<<<<<< HEAD
-=======
 <!-- Renew Contract Modal -->
 <div class="modal fade" id="renewContractModal" tabindex="-1">
   <div class="modal-dialog">
@@ -555,7 +503,6 @@ include __DIR__ . '/../includes/header.php';
   </div>
 </div>
 
->>>>>>> origin/james
 <!-- Record Payment Modal -->
 <div class="modal fade" id="paymentModal" tabindex="-1">
   <div class="modal-dialog">
@@ -572,19 +519,12 @@ include __DIR__ . '/../includes/header.php';
             <select class="form-select mb-3" name="contract_id" id="payment_contract_select" required>
               <option value="">Choose…</option>
               <?php foreach ($activeContracts as $c): ?>
-<<<<<<< HEAD
-                <option value="<?= $c['contract_id'] ?>" data-tenant="<?= $c['tenant_id'] ?>" data-rent="<?= $c['monthly_rent'] ?>"><?= clean($c['first_name'] . ' ' . $c['last_name']) ?> — Room <?= clean($c['room_number']) ?></option>
-=======
                 <option value="<?= $c['contract_id'] ?>" data-tenant="<?= $c['tenant_id'] ?>" data-rent="<?= $c['monthly_rent'] ?>"><?= clean($c['first_name'] . ' ' . $c['last_name']) ?> — Room <?= clean($c['room_number']) ?><?= $c['contract_status'] === 'Expired' ? ' (expired contract)' : '' ?></option>
->>>>>>> origin/james
               <?php endforeach; ?>
             </select>
             <input type="hidden" name="tenant_id" id="payment_tenant_id">
             <div class="row g-3">
               <div class="col-md-6"><label class="form-label">Amount (₱)</label><input type="number" step="0.01" min="0" class="form-control" name="payment_amount" id="payment_amount" required></div>
-<<<<<<< HEAD
-              <div class="col-md-6"><label class="form-label">For Month</label><input type="text" class="form-control" name="payment_for_month" placeholder="e.g. June 2026" required></div>
-=======
               <div class="col-md-6">
                 <label class="form-label">For Month</label>
                 <select class="form-select" name="payment_for_month" required>
@@ -593,7 +533,6 @@ include __DIR__ . '/../includes/header.php';
                   <?php endforeach; ?>
                 </select>
               </div>
->>>>>>> origin/james
             </div>
             <div class="mb-1 mt-3">
               <label class="form-label">Method</label>
@@ -619,8 +558,6 @@ document.getElementById('payment_contract_select')?.addEventListener('change', f
   document.getElementById('payment_tenant_id').value = this.selectedOptions[0]?.dataset.tenant || '';
   document.getElementById('payment_amount').value = this.selectedOptions[0]?.dataset.rent || '';
 });
-<<<<<<< HEAD
-=======
 
 // ---- Renew / Terminate modals -----------------------------------------
 // The renewal date always counts forward from whichever is later: the
@@ -662,7 +599,6 @@ document.getElementById('terminateContractModal')?.addEventListener('show.bs.mod
   document.getElementById('tc_name').textContent = btn.dataset.name;
   document.getElementById('tc_room').textContent = btn.dataset.room;
 });
->>>>>>> origin/james
 </script>";
 include __DIR__ . '/../includes/footer.php';
 ?>

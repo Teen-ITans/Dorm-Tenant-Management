@@ -60,17 +60,13 @@ and neither touches your existing data:
 | `key_returned` | Check-in/Check-out Monitor | `database/migration_add_key_returned.sql` |
 | `rejection_reason` | Tenant Registration/Approval (rejecting or reconsidering an applicant) | `database/migration_add_rejection_reason.sql` |
 | `reset_otp`, `reset_otp_expires` | Forgot Password | `database/migration_add_reset_otp.sql` |
-<<<<<<< HEAD
-
-Setting up fresh right now? Skip both — `schema.sql` already includes
-everything.
-=======
+| `password_changed_at` | Force-logout other sessions after a password reset | `database/migration_add_password_changed_at.sql` |
+| `dismissed_records` table | "Clear" on Registration/Approval, Track Status, Check-in/Check-out | `database/migration_add_dismissed_records.sql` |
 | `paymongo_checkout_id`, `paymongo_payment_id`, `webhook_received_at` | Paying rent with GCash | `database/migration_add_paymongo_columns.sql` |
 | `renewal_requested_at`, `last_renewed_at`, `renewal_count`, `terminated_at`, `termination_reason` | Renew / Terminate Contract | `database/migration_add_contract_renewal.sql` |
 
 Setting up fresh right now? Skip them all — `schema.sql` already
 includes everything.
->>>>>>> origin/james
 
 ### Want a clean slate instead of the demo tenant?
 
@@ -91,14 +87,18 @@ dorm-tenant-system/
 ├── index.php              # entry point → redirects to login or dashboard
 ├── config/
 │   ├── app.php             # bootstrap: session, constants, requires everything else
-│   └── database.php        # PDO connection
+│   ├── database.php        # PDO connection
+│   └── paymongo.php        # PayMongo GCash credentials (gitignored — see paymongo.example.php)
 ├── includes/
 │   ├── auth.php            # login/logout, require_role() guards
-│   ├── functions.php       # sanitizing, CSRF, flash messages, file uploads
+│   ├── functions.php       # sanitizing, CSRF, flash messages, file uploads, contract/rent helpers
 │   ├── email.php           # PHPMailer wrapper for alerts
-│   ├── tenant_action_handler.php  # shared approve/checkin/checkout/evict logic (see below)
+│   ├── paymongo.php        # PayMongo API client (checkout sessions, webhook signature check)
+│   ├── report_data.php     # shared query logic for Reports & Analytics
+│   ├── tenant_action_handler.php  # shared approve/checkin/checkout/evict/clear-view logic (see below)
 │   ├── header.php / footer.php / sidebar.php   # shared layout
-├── auth/                   # register.php, login.php, logout.php
+├── webhooks/paymongo.php   # PayMongo server-to-server payment confirmation (see docs/GCASH_SETUP.md)
+├── auth/                   # register.php, login.php, forgot/reset password, logout.php
 ├── admin/                  # dashboard + 11 admin pages, one per sidebar sub-section
 ├── tenant/                 # 5 modules + dashboard
 ├── assets/css/style.css    # the maroon theme
@@ -106,7 +106,7 @@ dorm-tenant-system/
 ├── database/schema.sql     # full schema + seed data
 ├── cron/check_expirations.php  # scheduled automation (see §5)
 ├── uploads/                # receipts / contracts / maintenance photos
-└── docs/diagrams.md        # Mermaid ER diagram + flowcharts
+└── docs/                   # diagrams.md (ER + flowcharts), GCASH_SETUP.md
 ```
 
 The admin sidebar's sub-items each route to their own page, one-for-one
@@ -286,8 +286,6 @@ misconfigured server that can include connection details. It now
 logs the real error server-side (`error_log()`) and shows a generic
 message to whoever's looking at the page.
 
-<<<<<<< HEAD
-=======
 **Why a renewal reuses the contract row instead of creating a new
 one:** a lease that gets extended is still the same lease, and the
 tenant's "Payment History" screen is built around that — every payment
@@ -348,19 +346,14 @@ whichever gets there first wins and the other is a no-op. Note that
 Checkout Sessions are *created* on PayMongo's `/v2` but *read back* on
 `/v1` — `/v2` has no GET route for them.
 
->>>>>>> origin/james
 **What's intentionally simple, and how to level it up:**
-- *PDF reports:* `admin/report_print.php` renders a clean printable
-  HTML table; "Export PDF" is just the browser's Print → Save as PDF.
-  For a one-click PDF button, drop in
-  [Dompdf](https://github.com/dompdf/dompdf) and feed it the same
-  queries.
+- *PDF reports:* `admin/report_print.php` is the on-screen Review/Print
+  view; `admin/report_export.php` renders the same data through
+  [Dompdf](https://github.com/dompdf/dompdf) for a real one-click PDF
+  download — no browser Print dialog needed.
 - *Email:* works out of the box only once you install PHPMailer (see
   §4). Until then, alerts are written to PHP's error log instead of
   silently failing.
-- *No password-reset flow* — reset would currently be an admin editing
-  the account in User Management. Worth adding a "forgot password"
-  emailed token flow as a next step.
 - *Maintenance teams* are a fixed list in `admin/maintenance.php`
   rather than their own table — fine for a handful of teams, but
   promote it to a `staff` table if you need scheduling per person.

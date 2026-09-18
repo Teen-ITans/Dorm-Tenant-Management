@@ -18,7 +18,6 @@ if (!defined('BASE_URL')) { http_response_code(403); exit('Direct access not per
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
     $action   = $_POST['action'] ?? '';
-<<<<<<< HEAD
 
     /**
      * "Clear" on Registration/Approval, Track Status, and Check-in/
@@ -69,8 +68,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect($selfPath);
     }
 
-=======
->>>>>>> origin/james
     $tenantId = (int) ($_POST['tenant_id'] ?? 0);
 
     $tenantStmt = $db->prepare("SELECT t.*, u.first_name, u.last_name, u.email FROM tenants t JOIN users u ON u.user_id = t.user_id WHERE t.tenant_id = ?");

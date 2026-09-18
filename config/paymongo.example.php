@@ -22,3 +22,14 @@ if (!defined('BASE_URL')) { http_response_code(403); exit('Direct access not per
  * GitHub, add config/paymongo.php to .gitignore and commit
  * config/paymongo.example.php instead.
  */
+
+define('PAYMONGO_API_BASE', 'https://api.paymongo.com/v2');
+define('PAYMONGO_SECRET_KEY', 'sk_test_REPLACE_ME');
+define('PAYMONGO_PUBLIC_KEY', 'pk_test_REPLACE_ME');
+define('PAYMONGO_WEBHOOK_SECRET', 'whsec_REPLACE_ME');
+
+/** True once real test/live keys have been filled in above. */
+function paymongo_configured(): bool
+{
+    return PAYMONGO_SECRET_KEY !== 'sk_test_REPLACE_ME' && PAYMONGO_SECRET_KEY !== '';
+}

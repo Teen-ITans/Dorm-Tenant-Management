@@ -19,10 +19,7 @@ $recentlyProcessed = $db->query("
     JOIN users u ON u.user_id = t.user_id
     LEFT JOIN dorm_rooms r ON r.room_id = t.room_id
     WHERE t.approval_status IN ('Approved','Rejected')
-<<<<<<< HEAD
       AND t.tenant_id NOT IN (SELECT tenant_id FROM dismissed_records WHERE page = 'approval')
-=======
->>>>>>> origin/james
     ORDER BY t.date_registered DESC
     LIMIT 5
 ")->fetchAll();
@@ -65,7 +62,6 @@ include __DIR__ . '/../includes/header.php';
 </div>
 
 <div class="panel mt-2">
-<<<<<<< HEAD
   <div class="panel-header">
     <h2>Recently Processed</h2>
     <?php if ($recentlyProcessed): ?>
@@ -81,9 +77,6 @@ include __DIR__ . '/../includes/header.php';
     </div>
     <?php endif; ?>
   </div>
-=======
-  <div class="panel-header"><h2>Recently Processed</h2></div>
->>>>>>> origin/james
   <?php if (!$recentlyProcessed): ?>
     <p class="text-muted py-3">Nothing processed yet.</p>
   <?php endif; ?>
@@ -100,11 +93,8 @@ include __DIR__ . '/../includes/header.php';
         <span class="badge badge-<?= $r['approval_status'] === 'Approved' ? 'success' : 'danger' ?>"><?= clean($r['approval_status']) ?></span>
         <?php if ($r['approval_status'] === 'Rejected'): ?>
           <form method="post" class="d-inline mt-1 d-block"><?= csrf_field() ?><input type="hidden" name="action" value="reconsider"><input type="hidden" name="tenant_id" value="<?= $r['tenant_id'] ?>"><button class="btn btn-sm btn-outline-maroon">Reconsider</button></form>
-<<<<<<< HEAD
         <?php elseif ($r['approval_status'] === 'Approved' && !$r['room_number']): ?>
           <a href="<?= BASE_URL ?>/admin/rooms.php?tenant=<?= $r['tenant_id'] ?>#rooms" class="btn btn-sm btn-maroon mt-1 d-block">Assign Room</a>
-=======
->>>>>>> origin/james
         <?php endif; ?>
       </div>
     </div>

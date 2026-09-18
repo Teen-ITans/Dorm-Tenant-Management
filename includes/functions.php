@@ -38,7 +38,6 @@ function redirect(string $path): void
 }
 
 /**
-<<<<<<< HEAD
  * Builds a full scheme+host URL for a BASE_URL-relative path. Needed
  * for callback URLs handed to an external service (e.g. PayMongo's
  * success_url/cancel_url) — those can't be sent a host-relative path
@@ -51,8 +50,6 @@ function absolute_url(string $path): string
 }
 
 /**
-=======
->>>>>>> origin/james
  * Run a paginated SELECT. $baseSql must NOT include LIMIT/OFFSET —
  * this appends them. $countSql is the matching "how many rows total"
  * query (same WHERE clause, just COUNT(*) instead of the real
@@ -170,10 +167,7 @@ function status_badge_class(string $status): string
         'Reserved'    => 'info',
         'Expiring Soon' => 'warning',
         'Overdue'     => 'danger',
-<<<<<<< HEAD
-=======
         'Failed'      => 'danger',
->>>>>>> origin/james
         'Evicted'     => 'danger',
         'Rejected'    => 'danger',
         'Expired'     => 'danger',
@@ -269,8 +263,6 @@ function days_until(string $date): int
     $today  = new DateTime('today');
     return (int) $today->diff($target)->format('%r%a');
 }
-<<<<<<< HEAD
-=======
 
 /* =====================================================================
    Contract lifecycle helpers
@@ -498,4 +490,3 @@ function sync_pending_gcash_payments(PDO $db, int $tenantId): int
 
     return $confirmed;
 }
->>>>>>> origin/james

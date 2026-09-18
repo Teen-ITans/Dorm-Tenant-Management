@@ -19,15 +19,10 @@ $result = paginate(
      JOIN users u ON u.user_id = t.user_id
      LEFT JOIN dorm_rooms r ON r.room_id = t.room_id
      WHERE t.approval_status = 'Approved'
-<<<<<<< HEAD
        AND t.tenant_id NOT IN (SELECT tenant_id FROM dismissed_records WHERE page = 'status')
      ORDER BY FIELD(t.status,'Active','Pending','Evicted','Checked Out'), u.first_name",
     "SELECT COUNT(*) c FROM tenants t WHERE t.approval_status = 'Approved'
        AND t.tenant_id NOT IN (SELECT tenant_id FROM dismissed_records WHERE page = 'status')"
-=======
-     ORDER BY FIELD(t.status,'Active','Pending','Evicted','Checked Out'), u.first_name",
-    "SELECT COUNT(*) c FROM tenants t WHERE t.approval_status = 'Approved'"
->>>>>>> origin/james
 );
 $allTenants = $result['rows'];
 
@@ -44,7 +39,6 @@ include __DIR__ . '/../includes/header.php';
 </div>
 
 <div class="panel mt-2">
-<<<<<<< HEAD
   <div class="panel-header">
     <h2>All Tenants</h2>
     <?php if ($allTenants): ?>
@@ -61,8 +55,6 @@ include __DIR__ . '/../includes/header.php';
     </div>
     <?php endif; ?>
   </div>
-=======
->>>>>>> origin/james
   <div class="table-responsive">
     <table class="table app-table align-middle">
       <thead><tr><th>Tenant</th><th>Room</th><th>Status</th><th>Contract Period</th><th>Details</th><th class="text-end">Actions</th></tr></thead>

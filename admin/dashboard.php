@@ -11,11 +11,6 @@ $occupancyRate = $totalRooms > 0 ? round(($occupiedRooms / $totalRooms) * 100) :
 
 $pending = $db->query("SELECT COUNT(*) c, COALESCE(SUM(payment_amount),0) total FROM payments WHERE payment_status IN ('Pending','Overdue')")->fetch();
 
-<<<<<<< HEAD
-$expiringContracts = (int) $db->query(
-    "SELECT COUNT(*) c FROM contracts WHERE contract_status IN ('Active','Expiring Soon') AND contract_end <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)"
-)->fetch()['c'];
-=======
 // Leases that need a decision: inside the 30-day window, or already
 // lapsed and still waiting to be renewed or terminated.
 refresh_contract_statuses($db);
@@ -23,7 +18,6 @@ $expiringContracts = (int) $db->query(
     "SELECT COUNT(*) c FROM contracts WHERE contract_status IN ('Active','Expiring Soon','Expired') AND contract_end <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)"
 )->fetch()['c'];
 $expiredContracts = (int) $db->query("SELECT COUNT(*) c FROM contracts WHERE contract_status = 'Expired'")->fetch()['c'];
->>>>>>> origin/james
 
 $openMaintenance = (int) $db->query("SELECT COUNT(*) c FROM maintenance_requests WHERE status IN ('Pending','Ongoing')")->fetch()['c'];
 $urgentMaintenance = (int) $db->query("SELECT COUNT(*) c FROM maintenance_requests WHERE status IN ('Pending','Ongoing') AND priority_level = 'Urgent'")->fetch()['c'];
@@ -46,11 +40,7 @@ $tenantsStmt = $db->prepare("
     FROM tenants t
     JOIN users u ON u.user_id = t.user_id
     LEFT JOIN dorm_rooms r ON r.room_id = t.room_id
-<<<<<<< HEAD
-    LEFT JOIN contracts c ON c.tenant_id = t.tenant_id AND c.contract_status IN ('Active','Expiring Soon')
-=======
     LEFT JOIN contracts c ON c.tenant_id = t.tenant_id AND c.contract_status IN ('Active','Expiring Soon','Expired')
->>>>>>> origin/james
     $where
     ORDER BY t.date_registered DESC
     LIMIT 8
@@ -106,18 +96,12 @@ include __DIR__ . '/../includes/header.php';
     <div class="stat-card-body">
       <div class="stat-label">Expiring Contracts (Count)</div>
       <div class="stat-value"><?= $expiringContracts ?></div>
-<<<<<<< HEAD
-      <div class="stat-sub"><i class="bi bi-arrow-down"></i> Within next 30 days</div>
-    </div>
-    <div class="stat-icon stat-icon-amber"><i class="bi bi-file-earmark-text"></i></div>
-=======
       <div class="stat-sub<?= $expiredContracts ? ' text-danger' : '' ?>">
         <i class="bi bi-arrow-down"></i>
         <?= $expiredContracts ? $expiredContracts . ' already expired' : 'Within next 30 days' ?>
       </div>
     </div>
     <div class="stat-icon stat-icon-amber"><a href="<?= BASE_URL ?>/admin/payments.php#contracts" class="text-reset"><i class="bi bi-file-earmark-text"></i></a></div>
->>>>>>> origin/james
   </div>
   <div class="stat-card">
     <div class="stat-card-body">

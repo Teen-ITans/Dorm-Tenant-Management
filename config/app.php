@@ -22,13 +22,6 @@ if (session_status() === PHP_SESSION_NONE) {
 define('BASE_URL', '/dorm-tenant-system');
 define('SITE_NAME', 'Dorm Tenant Management System');
 
-<<<<<<< HEAD
-require_once __DIR__ . '/database.php';
-require_once __DIR__ . '/../includes/functions.php';
-require_once __DIR__ . '/../includes/auth.php';
-require_once __DIR__ . '/../includes/email.php';
-require_once __DIR__ . '/paymongo.php';
-=======
 // Full public URL of the site (scheme + host + BASE_URL, no trailing
 // slash). BASE_URL alone is just a path, but PayMongo's success_url /
 // cancel_url and its webhook callback both need a real, reachable
@@ -46,4 +39,3 @@ require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/email.php';
 require_once __DIR__ . '/../includes/paymongo.php';
->>>>>>> origin/james

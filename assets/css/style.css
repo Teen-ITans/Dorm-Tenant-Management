@@ -378,9 +378,6 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.01em; }
 
 /* ---------- Contracts / notifications lists ---------- */
 .contract-list { display: flex; flex-direction: column; gap: .8rem; }
-<<<<<<< HEAD
-.contract-item { display: flex; justify-content: space-between; align-items: flex-start; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .8rem; gap: .6rem; }
-=======
 .contract-item { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .8rem; gap: .6rem; }
 /* A lapsed lease needs a decision, so it reads louder than the rest. */
 .contract-item.is-expired { border-left: 3px solid var(--red-text); background: #fffafa; }
@@ -418,7 +415,6 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.01em; }
 @media (max-width: 575.98px) {
   .rent-status-side { align-items: flex-start; width: 100%; }
 }
->>>>>>> origin/james
 
 .notification-item { display: flex; gap: .8rem; padding: .9rem; border-radius: var(--radius-sm); margin-bottom: .6rem; background: var(--bg); }
 .notification-item:last-child { margin-bottom: 0; }
